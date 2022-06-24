@@ -11,7 +11,6 @@ import {
   JupyterFrontEndPlugin
 } from '@jupyterlab/application';
 import {
-  // createToolbarFactory,
   Dialog,
   ICommandPalette,
   InputDialog,
@@ -19,11 +18,9 @@ import {
   IToolbarWidgetRegistry,
   sessionContextDialogs,
   showDialog,
-  // Toolbar,
 } from '@jupyterlab/apputils';
 import { Cell, CodeCell, ICellModel, MarkdownCell } from '@jupyterlab/cells';
 import { IEditorServices } from '@jupyterlab/codeeditor';
-// import { ToolbarItems as DocToolbarItems } from '@jupyterlab/docmanager-extension';
 import { IFileBrowserFactory } from '@jupyterlab/filebrowser';
 import { ILauncher } from '@jupyterlab/launcher';
 import {
@@ -45,15 +42,12 @@ import {
   NotebookWidgetFactory,
   StaticNotebook,
   NotebookActions,
-  // ExecutionIndicator,
-  // ToolbarItems,
   NotebookModelFactory,
 } from '@jupyterlab/notebook';
 import {
   IObservableList,
   IObservableUndoableList
 } from '@jupyterlab/observables';
-//import { ServiceManager } from '@jupyterlab/services';
 import { ISettingRegistry } from '@jupyterlab/settingregistry';
 import { ITranslator, nullTranslator } from '@jupyterlab/translation';
 import {
@@ -92,7 +86,6 @@ import {
 } from '@dfnotebook/dfnotebook';
 import { IRenderMimeRegistry } from '@jupyterlab/rendermime';
 import { PageConfig } from '@jupyterlab/coreutils';
-// import { DocumentRegistry } from '@jupyterlab/docregistry';
 
 /**
  * The command IDs used by the notebook plugin.
@@ -370,7 +363,6 @@ function activateDataflowModelFactory(
       widgetFactory.notebookConfig.disableDocumentWideUndoRedo
   });
   registry.addModelFactory(modelFactory);
-  console.log("Notebook model factory:", registry.getModelFactory('dfnotebook'));
   return modelFactory;
 }
 
@@ -483,7 +475,6 @@ function activateNotebookHandler(
   settingRegistry: ISettingRegistry | null,
   sessionDialogs: ISessionContextDialogs | null
 ): INotebookTracker {
-  console.log("STARTING NOTEBOOK HANDLER!");
   const trans = translator.load('jupyterlab');
   const services = app.serviceManager;
 
@@ -565,9 +556,6 @@ function activateNotebookHandler(
   });
   registry.addModelFactory(modelFactory);
   
-  console.log("Notebook model factory:", registry.getModelFactory('notebook'));
-  console.log("Dataflow Notebook model factory:", registry.getModelFactory('dfnotebook'));
-
   addCommands(app, tracker, translator, sessionDialogs);
 
   if (palette) {
@@ -690,7 +678,6 @@ function activateNotebookHandler(
 
   // Utility function to create a new notebook.
   const createNew = (cwd: string, kernelName?: string) => {
-    console.log("CREATE NEW:", kernelName);
     return commands
       .execute('docmanager:new-untitled', { path: cwd, type: 'notebook' })
       .then(model => {
@@ -769,7 +756,6 @@ function activateNotebookHandler(
       services.kernelspecs.specsChanged.connect(onSpecsChanged);
     });
   }
-
   return tracker;
 }
 
@@ -856,9 +842,7 @@ const isEnabledAndHeadingSelected = (): boolean => {
 
       if (current) {
         const { context, content } = current;
-        console.log("RUN SELECTED:", content);
         if (content instanceof DataflowNotebook) {
-          console.log("=> DATAFLOW");
           return DataflowNotebookActions.runAndAdvance(content, context.sessionContext);
         } else {
           return NotebookActions.runAndAdvance(content, context.sessionContext);
@@ -1189,6 +1173,7 @@ const isEnabledAndHeadingSelected = (): boolean => {
     },
     isEnabled
   });
+  
   commands.addCommand(CommandIDs.cut, {
     label: trans.__('Cut Cells'),
     caption: trans.__('Cut the selected cells'),
@@ -1927,8 +1912,7 @@ function populateMenus(
 
   // Add undo/redo hooks to the edit menu.
   mainMenu.editMenu.undoers.add({
-    // FIXME as unknown
-    tracker: tracker as unknown as NotebookTracker,
+    tracker: tracker,
     undo: widget => {
       widget.content.activeCell?.editor.undo();
     },
@@ -1939,8 +1923,7 @@ function populateMenus(
 
   // Add a clearer to the edit menu
   mainMenu.editMenu.clearers.add({
-    // FIXME as unknown
-    tracker: tracker as unknown as NotebookTracker,
+    tracker: tracker,
     clearCurrentLabel: (n: number) => trans.__('Clear Output'),
     clearAllLabel: (n: number) => {
       return trans.__('Clear All Outputs');
@@ -1955,8 +1938,7 @@ function populateMenus(
 
   // Add a close and shutdown command to the file menu.
   mainMenu.fileMenu.closeAndCleaners.add({
-    // FIXME as unknown
-    tracker: tracker as unknown as NotebookTracker,
+    tracker: tracker,
     closeAndCleanupLabel: (n: number) =>
       trans.__('Close and Shutdown Notebook'),
     closeAndCleanup: (current: NotebookPanel) => {
@@ -1977,8 +1959,7 @@ function populateMenus(
 
   // Add a kernel user to the Kernel menu
   mainMenu.kernelMenu.kernelUsers.add({
-    // FIXME as unknown
-    tracker: tracker as unknown as NotebookTracker,
+    tracker: tracker,
     interruptKernel: current => {
       const kernel = current.sessionContext.session?.kernel;
       if (kernel) {
@@ -2014,16 +1995,14 @@ function populateMenus(
 
   // Add a console creator the the Kernel menu
   mainMenu.fileMenu.consoleCreators.add({
-    // FIXME as unknown
-    tracker: tracker as unknown as NotebookTracker,
+    tracker: tracker,
     createConsoleLabel: (n: number) => trans.__('New Console for Notebook'),
     createConsole: current => Private.createConsole(commands, current, true)
   } as IFileMenu.IConsoleCreator<NotebookPanel>);
 
   // Add an IEditorViewer to the application view menu
   mainMenu.viewMenu.editorViewers.add({
-    // FIXME as unknown
-    tracker: tracker as unknown as NotebookTracker,
+    tracker: tracker,
     toggleLineNumbers: widget => {
       NotebookActions.toggleAllLineNumbers(widget.content);
     },
@@ -2039,8 +2018,7 @@ function populateMenus(
 
   // Add an ICodeRunner to the application run menu
   mainMenu.runMenu.codeRunners.add({
-    // FIXME as unknown
-    tracker: tracker as unknown as NotebookTracker,
+    tracker: tracker,
     runLabel: (n: number) => trans.__('Run Selected Cells'),
     runCaption: (n: number) => trans.__('Run the selected cells and advance'),
     runAllLabel: (n: number) => trans.__('Run All Cells'),
@@ -2094,8 +2072,7 @@ function populateMenus(
 
   // Add kernel information to the application help menu.
   mainMenu.helpMenu.kernelUsers.add({
-    // FIXME as unknown
-    tracker: tracker as unknown as NotebookTracker,
+    tracker: tracker,
     getKernel: current => current.sessionContext.session?.kernel
   } as IHelpMenu.IKernelUser<NotebookPanel>);
 }
