@@ -11,6 +11,7 @@ import {
   JupyterFrontEndPlugin
 } from '@jupyterlab/application';
 import {
+  createToolbarFactory,
   Dialog,
   ICommandPalette,
   InputDialog,
@@ -19,6 +20,7 @@ import {
   sessionContextDialogs,
   showDialog,
 } from '@jupyterlab/apputils';
+import { CellBarExtension } from '@jupyterlab/cell-toolbar';
 import { Cell, CodeCell, ICellModel, MarkdownCell } from '@jupyterlab/cells';
 import { IEditorServices } from '@jupyterlab/codeeditor';
 import { IFileBrowserFactory } from '@jupyterlab/filebrowser';
@@ -346,11 +348,41 @@ const modelFactoryPlugin: JupyterFrontEndPlugin<DataflowNotebookModelFactory.IFa
   autoStart: true,
 }
 
+const cellToolbar: JupyterFrontEndPlugin<void> = {
+  id: '@dfnotebook/dfnotebook-extension:cell-toolbar',
+  autoStart: true,
+  activate: async (
+    app: JupyterFrontEnd,
+    settingRegistry: ISettingRegistry | null,
+    toolbarRegistry: IToolbarWidgetRegistry | null,
+    translator: ITranslator | null
+  ) => {
+    const cellToolbarId = '@jupyterlab/cell-toolbar-extension:plugin';
+    const toolbarItems =
+      settingRegistry && toolbarRegistry
+        ? createToolbarFactory(
+            toolbarRegistry,
+            settingRegistry,
+            CellBarExtension.FACTORY_NAME,
+            cellToolbarId,
+            translator ?? nullTranslator
+          )
+        : undefined;
+
+    app.docRegistry.addWidgetExtension(
+      DATAFLOW_FACTORY,
+      new CellBarExtension(app.commands, toolbarItems)
+    );
+  },
+  optional: [ISettingRegistry, IToolbarWidgetRegistry, ITranslator]
+};
+
 const plugins: JupyterFrontEndPlugin<any>[] = [
   contentFactoryPlugin,
   widgetFactoryPlugin,
   modelFactoryPlugin,
   trackerPlugin,
+  cellToolbar
 ]
 export default plugins;
 
