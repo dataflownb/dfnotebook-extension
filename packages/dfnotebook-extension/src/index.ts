@@ -86,6 +86,7 @@ import {
 } from '@dfnotebook/dfnotebook';
 import { IRenderMimeRegistry } from '@jupyterlab/rendermime';
 import { PageConfig } from '@jupyterlab/coreutils';
+import { DataflowInputArea } from '@dfnotebook/dfcells';
 
 /**
  * The command IDs used by the notebook plugin.
@@ -249,6 +250,8 @@ namespace CommandIDs {
   export const expandAllCmd = 'Collapsible_Headings:Expand_All';
 
   export const copyToClipboard = 'notebook:copy-to-clipboard';
+
+  export const tagCell = 'notebook:tag-cell';
 }
 
 /**
@@ -1795,6 +1798,21 @@ const isEnabledAndHeadingSelected = (): boolean => {
       }
     }
   });
+
+  commands.addCommand(CommandIDs.tagCell, {
+    label: trans.__('Tag Cell'),
+    execute: args => {
+      const cell = tracker.currentWidget?.content.activeCell as CodeCell;
+
+      if (cell == null) {
+        return;
+      }
+
+      const inputArea = cell.inputArea as DataflowInputArea;
+      const value = prompt("Tag this cell please:", "");
+      inputArea.addTag(value);
+    }
+  });
 }
 
 /**
@@ -1871,6 +1889,7 @@ function populatePalette(
     CommandIDs.extendBottom,
     CommandIDs.moveDown,
     CommandIDs.moveUp,
+    CommandIDs.tagCell,
     CommandIDs.undoCellAction,
     CommandIDs.redoCellAction,
     CommandIDs.markdown1,
