@@ -624,6 +624,65 @@ const MiniMap: JupyterFrontEndPlugin<void> = {
         }
     };
 
+const ExportNotebook: JupyterFrontEndPlugin<void> = {
+  id: 'export-as-ipykernel-notebook',
+  autoStart: true,
+  requires: [ICommandPalette, INotebookTracker],
+  activate: (app: JupyterFrontEnd, palette: ICommandPalette, nbTrackers: INotebookTracker, rendermime: IRenderMimeRegistry) => {
+    let session: ISessionContext;
+    console.log("export-as-ipykernel-notebook is enabled");
+    nbTrackers.widgetAdded.connect((sender,nbPanel) => {
+      session = nbPanel.sessionContext;
+        session.ready.then(() => {
+          if(session.session?.kernel?.name == 'dfpython3'){
+              console.log("export-as-ipykernel-notebook is available");
+              const button = new ToolbarButton({
+                  className: 'export-as-ipykernel-notebook',
+                  label: 'Export as ipykernel notebook',
+                  onClick: exportAsIpyNotebook,
+                  tooltip: 'convert and export as ipykernel notebook',
+              });
+              nbPanel.toolbar.insertItem(10, 'Export as ipykernel notebook', button);
+          }
+        });
+    });
+    
+    async function exportAsIpyNotebook(){
+      console.log('started exporting to Ipykernel Notebook!');          
+      const notebook = app.shell.currentWidget as NotebookPanel;
+      if (notebook) {
+        const clonedModel = JSON.parse(JSON.stringify(notebook.model?.toJSON()));
+        const kernel = session.session?.kernel;
+        if(kernel){
+          let comm = kernel.createComm('dfconvert');
+          comm.open();
+          comm.send({'notebook': clonedModel});
+          comm.onMsg = (msg: any) => {
+            console.log('_______________received ipy notebook _____________')
+            var updated_notebook = msg.content.data.notebook;
+            const data = new Blob([JSON.stringify(updated_notebook)], { type: 'application/json' });
+            const url = URL.createObjectURL(data);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'notebook.ipynb';
+            link.click();
+          };
+        }
+      }
+    }
+
+    //Add an application command
+    const command: string = 'export as ipykernel notebook';
+    app.commands.addCommand(command, {
+      label: 'Export as ipykernel notebook',
+      execute: () => exportAsIpyNotebook,
+    });
+
+    //Add the command to the palette.
+    palette.addItem({ command, category: 'Tutorial' });
+
+  }
+};
 
 const plugins: JupyterFrontEndPlugin<any>[] = [
   factory,
@@ -631,7 +690,8 @@ const plugins: JupyterFrontEndPlugin<any>[] = [
   trackerPlugin,
   DepViewer,
   MiniMap,
-  GraphManagerPlugin
+  GraphManagerPlugin,
+  ExportNotebook
 ];
 export default plugins;
 
