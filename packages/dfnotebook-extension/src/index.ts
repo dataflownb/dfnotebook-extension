@@ -81,7 +81,7 @@ import {
   UUID
 } from '@lumino/coreutils';
 import { DisposableSet } from '@lumino/disposable';
-import { Panel } from '@lumino/widgets';
+import { Menu, Panel, Widget } from '@lumino/widgets';
 import { showErrorMessage } from '@jupyterlab/apputils';
 
 import {
@@ -662,55 +662,81 @@ const cellToolbar: JupyterFrontEndPlugin<void> = {
 const ExportNotebook: JupyterFrontEndPlugin<void> = {
   id: 'export-as-ipykernel-notebook',
   autoStart: true,
-  requires: [ICommandPalette, INotebookTracker],
-  activate: (app: JupyterFrontEnd, palette: ICommandPalette, nbTrackers: INotebookTracker, rendermime: IRenderMimeRegistry) => {
-    console.log("Export Option converting Dfnotebook to Ipykernel notebook is enabled");
-
-    // In the activate function:
-    nbTrackers.widgetAdded.connect((sender, nbPanel) => {
-      nbPanel.sessionContext.ready.then(() => {
-        addExportButton(nbPanel);
-        nbPanel.sessionContext.kernelChanged.connect(() => {
-          addExportButton(nbPanel);
-        });
-      });
-    });
-
-    nbTrackers.currentChanged.connect((sender, nbPanel) => {
-      if (nbPanel) {
-        addExportButton(nbPanel);
+  requires: [IMainMenu, INotebookTracker],
+  activate: (
+    app: JupyterFrontEnd,
+    mainMenu: IMainMenu,
+    notebookTracker: INotebookTracker,
+    labShell: ILabShell
+  ) => {
+    const { commands } = app;
+    const command = 'notebook:export-as-ipykernel-notebook';
+    commands.addCommand(command, {
+      label: 'Ipykernel notebook',
+      execute: async () => {
+        const notebook = notebookTracker.currentWidget;
+        if (notebook) {
+          await handleExportClick(notebook);
+        }
+      },
+      isEnabled: () => {
+        const currentWidget = app.shell.currentWidget;
+        return (
+          currentWidget !== null &&
+          notebookTracker.has(currentWidget) &&
+          currentWidget instanceof NotebookPanel
+        );
       }
     });
 
-    function addExportButton(nbPanel: NotebookPanel) {
+    labShell?.currentChanged.connect(() => {
+      commands.notifyCommandChanged(command);
+    });
+
+    function createMenuItem(): Menu.IItemOptions {
+      return { command };
+    }
+
+    app.restored.then(() => {
+      const fileMenu = mainMenu.fileMenu;
+      const saveAsMenuItem = fileMenu.items.find(
+        item => item.type === 'submenu' && item.label === 'Save and Export Notebook As'
+      );
+
+      if (saveAsMenuItem && saveAsMenuItem.submenu) {
+        saveAsMenuItem.submenu.addItem(createMenuItem());
+      } else {
+        console.warn('Save and Export Notebook As submenu not found');
+      }
+    });
+
+    async function handleExportClick(nbPanel: NotebookPanel) {
       if (nbPanel.sessionContext.session?.kernel?.name === 'dfpython3') {
-        dfPackages(nbPanel).then((dfPackagesStatus: any) => {
-          if (dfPackagesStatus['dfconvert'] === true) {
-            console.log("export-as-ipykernel-notebook is available");
-            const button = new ToolbarButton({
-              className: 'export-as-ipykernel-notebook',
-              label: 'Export as ipykernel notebook',
-              onClick: () => exportAsIpyNotebook(nbPanel),
-              tooltip: 'convert and export as ipykernel notebook',
-            });
-            nbPanel.toolbar.insertItem(10, 'Export as ipykernel notebook', button);
-          }
-        });
+        const dfPackagesStatus = await dfPackages(nbPanel) as { [key: string]: any };
+        if (dfPackagesStatus && dfPackagesStatus['dfconvert'] === true) {
+          exportAsIpyNotebook(nbPanel);
+        } else {
+          showPackageDialog();
+        }
+      } else {
+        showKernelDialog();
       }
     }
 
     async function dfPackages(nbPanel: NotebookPanel){
       let kernel = nbPanel.sessionContext.session?.kernel;
-      let result: JSONObject[] = [];
+      let result: JSONObject = {};
       if(kernel){
         let comm = kernel.createComm('dfpackages');
         comm.open();
-        const resultPromise = new PromiseDelegate<JSONObject[]>();
+        comm.send({});
+        const resultPromise = new PromiseDelegate<JSONObject>();
         comm.onMsg = msg =>
-        resultPromise.resolve((msg.content.data.dfpackages as any) as JSONObject[]);
+        resultPromise.resolve((msg.content.data as any) as JSONObject);
         result = await resultPromise.promise;
       }
-      return result;
+
+      return result ? result['dfpackages'] : result;
     }
 
     async function exportAsIpyNotebook(nbPanel: NotebookPanel){
@@ -744,16 +770,35 @@ const ExportNotebook: JupyterFrontEndPlugin<void> = {
       }
     }
 
-    //Add an application command
-    const command: string = 'export as ipykernel notebook';
-    app.commands.addCommand(command, {
-      label: 'Export as ipykernel notebook',
-      execute: () => exportAsIpyNotebook,
-    });
+    function showPackageDialog() {
+      const message = `
+      <p>
+      This operation requires the dfconvert package to be installed.<br> 
+      Use the following command for its installation:
+      </p>
+      <code style="background: #eee; border: solid 1px; background-color: #eee; border: 1px solid #999; display: block;
+        padding: 4px;
+        color: #e7439b;
+      ">pip install dfconvert</code>
+      `;
 
-    //Add the command to the palette.
-    palette.addItem({ command, category: 'Tutorial' });
+      const body = new Widget({ node: document.createElement('div') });
+      body.node.innerHTML = message;
 
+      void showDialog({
+        title: 'Package Required',
+        body,
+        buttons: [Dialog.okButton()]
+      });
+    }
+
+    function showKernelDialog() {
+      void showDialog({
+        title: 'Incorrect Kernel',
+        body: 'This operation requires a Jupyter notebook with the dfpython3 kernel. Please ensure you are using a dfpython3 kernel notebook and try again.',
+        buttons: [Dialog.okButton()]
+      });
+    }
   }
 };
 
