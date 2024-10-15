@@ -36,10 +36,9 @@
     "lib/**/*.js",
     "schema/*.json",
     "style/*.css",
+    "style/tag.svg",
     "style/index.js",
-    "src/**/*.{ts,tsx}",
-    "src/**/*.{d.ts,ts,tsx}",
-    "style/**/*.{css,eot,gif,html,jpg,json,png,svg,woff2,ttf}"
+    "src/**/*.{d.ts,ts,tsx}"
   ],
   "scripts": {
     "build": "jlpm build:lib && jlpm build:labextension:dev",
