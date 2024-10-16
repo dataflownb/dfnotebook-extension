@@ -120,8 +120,9 @@ import { DataflowNotebookModel } from './model';
                     const cId = cAny.id.replace(/-/g, '').substring(0, 8);
                     const dfmetadata = cAny.getMetadata('dfmetadata');
                     
-                    if(content.identifier_refs[cId]){
+                    if(content.identifier_refs && content.identifier_refs[cId]){
                       let inputVarsMetadata = { 'ref': {}, 'tag_refs': {}};
+                      let cellOutputTags: string[] = [];
                       inputVarsMetadata.ref = content.identifier_refs[cId];
                       
                       let tag_refs: { [key: string]: string } = {}
@@ -130,17 +131,14 @@ import { DataflowNotebookModel } from './model';
                           tag_refs[ref_keys] = all_tags[ref_keys];
                         }
                       }
-                      inputVarsMetadata.tag_refs = tag_refs;
-                      dfmetadata.inputVars = inputVarsMetadata;
-                      dfmetadata.persistentCode = cAny.sharedModel.getSource();
-                    }
-                
-                    if(content.identifier_refs[cId]){
-                      let cellOutputTags: string[] = [];
+
                       for (let i = 0; i < cAny.outputs.length; ++i) {
                         const out = cAny.outputs.get(i);
                         cellOutputTags.push(out.metadata['output_tag'] as string);
                       }
+
+                      inputVarsMetadata.tag_refs = tag_refs;
+                      dfmetadata.inputVars = inputVarsMetadata;
                       dfmetadata.outputVars = cellOutputTags;
                       dfmetadata.persistentCode = cAny.sharedModel.getSource();
                     }
