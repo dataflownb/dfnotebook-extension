@@ -33,9 +33,6 @@ module.exports = {
   ],
   coverageDirectory: 'coverage',
   coverageReporters: ['lcov', 'text'],
-  moduleNameMapper: {
-    '^../styles/tag.svg$': '<rootDir>/test/svgmock.js',
-  },
   reporters: ['default', 'github-actions'],
   transformIgnorePatterns: [`/node_modules/(?!${esModules}).+`]
 };
