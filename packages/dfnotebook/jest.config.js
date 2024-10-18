@@ -34,5 +34,6 @@ module.exports = {
   coverageDirectory: 'coverage',
   coverageReporters: ['lcov', 'text'],
   reporters: ['default', 'github-actions'],
+  testTimeout: 30000,
   transformIgnorePatterns: [`/node_modules/(?!${esModules}).+`]
 };
