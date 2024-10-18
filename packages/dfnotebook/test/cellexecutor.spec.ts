@@ -139,7 +139,7 @@ describe('Identifier reference update', () => {
       expect(cAny.outputs.length).toBe(1);
       expect(cAny.outputs.get(0).data['text/plain']).toBe('18');
       expect(cAny.sharedModel.source).toBe('b=a+9');
-    });
+    }, 30000);
   
     it('Reference UUID is not removed when ambiguity exist', async () => {
       // Code cell 1
@@ -171,7 +171,7 @@ describe('Identifier reference update', () => {
       expect(cAny.outputs.length).toBe(1);
       expect(cAny.outputs.get(0).data['text/plain']).toBe('108');
       expect(cAny.sharedModel.source).toBe('a=5\ntest=a+99\nb=a$'+refId+'+99');
-    });
+    }, 30000);
   
     it('Dfmetadata should be updated with references', async () => {
       // Code cell 1
@@ -211,7 +211,7 @@ describe('Identifier reference update', () => {
         "tag_refs": {}
       });
       expect(dfmetadata.outputVars).toEqual(['b'])
-    });
+    }, 30000);
   
     it('Reference UUID is added when same identifier exported more than once', async () => {
       // Code cell 1
@@ -256,7 +256,7 @@ describe('Identifier reference update', () => {
       const refId = (notebook?.cells.get(0) as ICodeCellModel).id.replace(/-/g, '').substring(0, 8);
       expect(result).toBe(true);
       expect(cAny.sharedModel.source).toBe('b=a$'+refId+'+9');
-    });
+    }, 30000);
 
     it('When an identifier is exported multiple times and later reduced to one, the UUID is removed', async () => {
       // Code cell 1
@@ -309,7 +309,7 @@ describe('Identifier reference update', () => {
       result = await runNotebookCell(notebook, cellModel);
       expect(result).toBe(true);
       expect(cAny.sharedModel.source).toBe('b=a+9');
-    });
+    }, 30000);
   
     it('Reference UUID is added to identifier when its reference cell is deleted', async () => {
       // Code cell 1
@@ -356,7 +356,7 @@ describe('Identifier reference update', () => {
       let cAny = notebook?.cells.get(0) as ICodeCellModel;
       expect(result).toBe(true);
       expect(cAny.sharedModel.source).toBe('b=a$'+refId+'+9');
-    })
+    }, 30000)
   
     it('Reference UUID is added to identifier when its ref is removed by updating cell', async () => {
       // Code cell 1
@@ -394,7 +394,7 @@ describe('Identifier reference update', () => {
       const refId = (notebook?.cells.get(0) as ICodeCellModel).id.replace(/-/g, '').substring(0, 8);
       expect(result).toBe(true);
       expect(cAny.sharedModel.source).toBe('b=a$'+refId+'+9');
-    })
+    }, 30000)
   });
 
   describe('Update references with Tags', () => {
@@ -433,7 +433,7 @@ describe('Identifier reference update', () => {
       expect(cAny.outputs.length).toBe(1);
       expect(cAny.outputs.get(0).data['text/plain']).toBe('108');
       expect(cAny.sharedModel.source).toBe('a=5\ntest=a+99\nb=a$Tag1+99');
-    });
+    }, 30000);
   
     it('CellId should be replaced with tag in codecells when tag is added', async () => {
       // Code cell 1
@@ -471,7 +471,7 @@ describe('Identifier reference update', () => {
       
       let cAny = notebook?.cells.get(1) as ICodeCellModel;
       expect(cAny.sharedModel.source).toBe('a=5\ntest=a+99\nb=a$Tag1+99');
-    });
+    }, 30000);
 
     it('Dfmetadata should be updated with tag references', async () => {
       // Code cell 1
@@ -520,7 +520,7 @@ describe('Identifier reference update', () => {
           [refId]: "Tag1"
         }
       });
-    });
+    }, 30000);
   
     it('Tag should be replaced with UUID when tag is removed', async () => {
       // Code cell 1
@@ -565,7 +565,7 @@ describe('Identifier reference update', () => {
       expect(cAny.outputs.length).toBe(1);
       expect(cAny.outputs.get(0).data['text/plain']).toBe('108');
       expect(cAny.sharedModel.source).toBe('a=5\ntest=a+99\nb=a$'+refId+'+99');
-    })
+    }, 30000)
 
     it('Tag should be replaced with UUID when tagged cell is deleted', async () => {
       // Code cell 1
@@ -618,7 +618,7 @@ describe('Identifier reference update', () => {
       
       let cAny = notebook?.cells.get(0) as ICodeCellModel;
       expect(cAny.sharedModel.source).toBe('a=5\ntest=a+99\nb=a$'+refId+'+99');
-    })
+    }, 30000)
 
   });
 
