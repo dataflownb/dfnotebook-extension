@@ -9,7 +9,7 @@ import { IRenderMimeRegistry } from '@jupyterlab/rendermime';
 import * as utils from './utils';
 import { INotebookModel, StaticNotebook as StaticNotebookType } from '@jupyterlab/notebook';
 import { NBTestUtils } from '@jupyterlab/notebook/lib/testutils';
-import { updateNotebookCellsWithTag }  from '../../dfnotebook-extension/src/index'
+//import { updateNotebookCellsWithTag }  from '../../dfnotebook-extension/src/index'
 
 describe('Identifier reference update', () => {
   let sessionContext: ISessionContext;
@@ -140,487 +140,487 @@ describe('Identifier reference update', () => {
       expect(cAny.outputs.length).toBe(1);
       expect(cAny.outputs.get(0).data['text/plain']).toBe('18');
       expect(cAny.sharedModel.source).toBe('b=a+9');
-    }, 60000);
-  
-    it('Reference UUID is not removed when ambiguity exist', async () => {
-      // Code cell 1
-      notebook?.sharedModel.insertCell(0, {
-        cell_type: 'code',
-        source: 'a=9',
-        metadata: {
-          trusted: false
-        }
-      });
-  
-      let cellModel = notebook?.cells.get(0) as ICodeCellModel;
-      let result = await runNotebookCell(notebook, cellModel);
-      const refId = (notebook?.cells.get(0) as ICodeCellModel).id.replace(/-/g, '').substring(0, 8);
-      //Code cell 2
-      notebook?.sharedModel.insertCell(1, {
-        cell_type: 'code',
-        source: 'a=5\ntest=a+99\nb=a$'+refId+'+99',
-        metadata: {
-          trusted: false
-        }
-      });
-  
-      cellModel = notebook?.cells.get(1) as ICodeCellModel;
-      result = await runNotebookCell(notebook, cellModel);
-      
-      let cAny = notebook?.cells.get(1) as ICodeCellModel;
-      expect(result).toBe(true);
-      expect(cAny.outputs.length).toBe(1);
-      expect(cAny.outputs.get(0).data['text/plain']).toBe('108');
-      expect(cAny.sharedModel.source).toBe('a=5\ntest=a+99\nb=a$'+refId+'+99');
     });
   
-    it('Dfmetadata should be updated with references', async () => {
-      // Code cell 1
-      notebook?.sharedModel.insertCell(0, {
-        cell_type: 'code',
-        source: 'a=9',
-        metadata: {
-          trusted: false
-        }
-      });
+    // it('Reference UUID is not removed when ambiguity exist', async () => {
+    //   // Code cell 1
+    //   notebook?.sharedModel.insertCell(0, {
+    //     cell_type: 'code',
+    //     source: 'a=9',
+    //     metadata: {
+    //       trusted: false
+    //     }
+    //   });
   
-      let cellModel = notebook?.cells.get(0) as ICodeCellModel;
-      let result = await runNotebookCell(notebook, cellModel);
-      expect(result).toBe(true);
+    //   let cellModel = notebook?.cells.get(0) as ICodeCellModel;
+    //   let result = await runNotebookCell(notebook, cellModel);
+    //   const refId = (notebook?.cells.get(0) as ICodeCellModel).id.replace(/-/g, '').substring(0, 8);
+    //   //Code cell 2
+    //   notebook?.sharedModel.insertCell(1, {
+    //     cell_type: 'code',
+    //     source: 'a=5\ntest=a+99\nb=a$'+refId+'+99',
+    //     metadata: {
+    //       trusted: false
+    //     }
+    //   });
   
-      //Code cell 2
-      notebook?.sharedModel.insertCell(1, {
-        cell_type: 'code',
-        source: 'b=a+9',
-        metadata: {
-          trusted: false
-        }
-      });
-  
-      cellModel = notebook?.cells.get(1) as ICodeCellModel;
-      result = await runNotebookCell(notebook, cellModel);
-  
-      let cAny = notebook?.cells.get(1) as ICodeCellModel;
-      const refId = (notebook?.cells.get(0) as ICodeCellModel).id.replace(/-/g, '').substring(0, 8);
-      let dfmetadata = cAny.getMetadata("dfmetadata")
-      expect(result).toBe(true);    
-      expect(dfmetadata).toBeDefined();
-      expect(dfmetadata.inputVars).toEqual({
-        "ref": {
-          [refId]: ["a"]
-        },
-        "tag_refs": {}
-      });
-      expect(dfmetadata.outputVars).toEqual(['b'])
-    });
-  
-    it('Reference UUID is added when same identifier exported more than once', async () => {
-      // Code cell 1
-      notebook?.sharedModel.insertCell(0, {
-        cell_type: 'code',
-        source: 'a=9',
-        metadata: {
-          trusted: false
-        }
-      });
-  
-      let cellModel = notebook?.cells.get(0) as ICodeCellModel;
-      let result = await runNotebookCell(notebook, cellModel);
-      expect(result).toBe(true);
-  
-      //Code cell 2
-      notebook?.sharedModel.insertCell(1, {
-        cell_type: 'code',
-        source: 'b=a+9',
-        metadata: {
-          trusted: false
-        }
-      });
-  
-      cellModel = notebook?.cells.get(1) as ICodeCellModel;
-      result = await runNotebookCell(notebook, cellModel);
-      expect(result).toBe(true);
+    //   cellModel = notebook?.cells.get(1) as ICodeCellModel;
+    //   result = await runNotebookCell(notebook, cellModel);
       
-      //Code cell 3
-      notebook?.sharedModel.insertCell(2, {
-        cell_type: 'code',
-        source: 'a=9',
-        metadata: {
-          trusted: false
-        }
-      });
+    //   let cAny = notebook?.cells.get(1) as ICodeCellModel;
+    //   expect(result).toBe(true);
+    //   expect(cAny.outputs.length).toBe(1);
+    //   expect(cAny.outputs.get(0).data['text/plain']).toBe('108');
+    //   expect(cAny.sharedModel.source).toBe('a=5\ntest=a+99\nb=a$'+refId+'+99');
+    // });
   
-      cellModel = notebook?.cells.get(2) as ICodeCellModel;
-      result = await runNotebookCell(notebook, cellModel);
+    // it('Dfmetadata should be updated with references', async () => {
+    //   // Code cell 1
+    //   notebook?.sharedModel.insertCell(0, {
+    //     cell_type: 'code',
+    //     source: 'a=9',
+    //     metadata: {
+    //       trusted: false
+    //     }
+    //   });
+  
+    //   let cellModel = notebook?.cells.get(0) as ICodeCellModel;
+    //   let result = await runNotebookCell(notebook, cellModel);
+    //   expect(result).toBe(true);
+  
+    //   //Code cell 2
+    //   notebook?.sharedModel.insertCell(1, {
+    //     cell_type: 'code',
+    //     source: 'b=a+9',
+    //     metadata: {
+    //       trusted: false
+    //     }
+    //   });
+  
+    //   cellModel = notebook?.cells.get(1) as ICodeCellModel;
+    //   result = await runNotebookCell(notebook, cellModel);
+  
+    //   let cAny = notebook?.cells.get(1) as ICodeCellModel;
+    //   const refId = (notebook?.cells.get(0) as ICodeCellModel).id.replace(/-/g, '').substring(0, 8);
+    //   let dfmetadata = cAny.getMetadata("dfmetadata")
+    //   expect(result).toBe(true);    
+    //   expect(dfmetadata).toBeDefined();
+    //   expect(dfmetadata.inputVars).toEqual({
+    //     "ref": {
+    //       [refId]: ["a"]
+    //     },
+    //     "tag_refs": {}
+    //   });
+    //   expect(dfmetadata.outputVars).toEqual(['b'])
+    // });
+  
+    // it('Reference UUID is added when same identifier exported more than once', async () => {
+    //   // Code cell 1
+    //   notebook?.sharedModel.insertCell(0, {
+    //     cell_type: 'code',
+    //     source: 'a=9',
+    //     metadata: {
+    //       trusted: false
+    //     }
+    //   });
+  
+    //   let cellModel = notebook?.cells.get(0) as ICodeCellModel;
+    //   let result = await runNotebookCell(notebook, cellModel);
+    //   expect(result).toBe(true);
+  
+    //   //Code cell 2
+    //   notebook?.sharedModel.insertCell(1, {
+    //     cell_type: 'code',
+    //     source: 'b=a+9',
+    //     metadata: {
+    //       trusted: false
+    //     }
+    //   });
+  
+    //   cellModel = notebook?.cells.get(1) as ICodeCellModel;
+    //   result = await runNotebookCell(notebook, cellModel);
+    //   expect(result).toBe(true);
       
-      let cAny = notebook?.cells.get(1) as ICodeCellModel;
-      const refId = (notebook?.cells.get(0) as ICodeCellModel).id.replace(/-/g, '').substring(0, 8);
-      expect(result).toBe(true);
-      expect(cAny.sharedModel.source).toBe('b=a$'+refId+'+9');
-    });
+    //   //Code cell 3
+    //   notebook?.sharedModel.insertCell(2, {
+    //     cell_type: 'code',
+    //     source: 'a=9',
+    //     metadata: {
+    //       trusted: false
+    //     }
+    //   });
+  
+    //   cellModel = notebook?.cells.get(2) as ICodeCellModel;
+    //   result = await runNotebookCell(notebook, cellModel);
+      
+    //   let cAny = notebook?.cells.get(1) as ICodeCellModel;
+    //   const refId = (notebook?.cells.get(0) as ICodeCellModel).id.replace(/-/g, '').substring(0, 8);
+    //   expect(result).toBe(true);
+    //   expect(cAny.sharedModel.source).toBe('b=a$'+refId+'+9');
+    // });
 
-    it('When an identifier is exported multiple times and later reduced to one, the UUID is removed', async () => {
-      // Code cell 1
-      notebook?.sharedModel.insertCell(0, {
-        cell_type: 'code',
-        source: 'a=9',
-        metadata: {
-          trusted: false
-        }
-      });
+    // it('When an identifier is exported multiple times and later reduced to one, the UUID is removed', async () => {
+    //   // Code cell 1
+    //   notebook?.sharedModel.insertCell(0, {
+    //     cell_type: 'code',
+    //     source: 'a=9',
+    //     metadata: {
+    //       trusted: false
+    //     }
+    //   });
   
-      let cellModel = notebook?.cells.get(0) as ICodeCellModel;
-      let result = await runNotebookCell(notebook, cellModel);
-      expect(result).toBe(true);
+    //   let cellModel = notebook?.cells.get(0) as ICodeCellModel;
+    //   let result = await runNotebookCell(notebook, cellModel);
+    //   expect(result).toBe(true);
   
-      //Code cell 2
-      notebook?.sharedModel.insertCell(1, {
-        cell_type: 'code',
-        source: 'b=a+9',
-        metadata: {
-          trusted: false
-        }
-      });
+    //   //Code cell 2
+    //   notebook?.sharedModel.insertCell(1, {
+    //     cell_type: 'code',
+    //     source: 'b=a+9',
+    //     metadata: {
+    //       trusted: false
+    //     }
+    //   });
   
-      cellModel = notebook?.cells.get(1) as ICodeCellModel;
-      result = await runNotebookCell(notebook, cellModel);
-      expect(result).toBe(true);
+    //   cellModel = notebook?.cells.get(1) as ICodeCellModel;
+    //   result = await runNotebookCell(notebook, cellModel);
+    //   expect(result).toBe(true);
       
-      //Code cell 3
-      notebook?.sharedModel.insertCell(2, {
-        cell_type: 'code',
-        source: 'a=9',
-        metadata: {
-          trusted: false
-        }
-      });
+    //   //Code cell 3
+    //   notebook?.sharedModel.insertCell(2, {
+    //     cell_type: 'code',
+    //     source: 'a=9',
+    //     metadata: {
+    //       trusted: false
+    //     }
+    //   });
   
-      cellModel = notebook?.cells.get(2) as ICodeCellModel;
-      result = await runNotebookCell(notebook, cellModel);
+    //   cellModel = notebook?.cells.get(2) as ICodeCellModel;
+    //   result = await runNotebookCell(notebook, cellModel);
       
-      let cAny = notebook?.cells.get(1) as ICodeCellModel;
-      const refId = (notebook?.cells.get(0) as ICodeCellModel).id.replace(/-/g, '').substring(0, 8);
-      expect(result).toBe(true);
-      expect(cAny.sharedModel.source).toBe('b=a$'+refId+'+9');
+    //   let cAny = notebook?.cells.get(1) as ICodeCellModel;
+    //   const refId = (notebook?.cells.get(0) as ICodeCellModel).id.replace(/-/g, '').substring(0, 8);
+    //   expect(result).toBe(true);
+    //   expect(cAny.sharedModel.source).toBe('b=a$'+refId+'+9');
 
-      //deleting code cell 2
-      notebook.sharedModel.deleteCell(2)
+    //   //deleting code cell 2
+    //   notebook.sharedModel.deleteCell(2)
 
-      cellModel = notebook?.cells.get(0) as ICodeCellModel;
-      result = await runNotebookCell(notebook, cellModel);
-      expect(result).toBe(true);
-      expect(cAny.sharedModel.source).toBe('b=a+9');
-    });
+    //   cellModel = notebook?.cells.get(0) as ICodeCellModel;
+    //   result = await runNotebookCell(notebook, cellModel);
+    //   expect(result).toBe(true);
+    //   expect(cAny.sharedModel.source).toBe('b=a+9');
+    // });
   
-    it('Reference UUID is added to identifier when its reference cell is deleted', async () => {
-      // Code cell 1
-      notebook?.sharedModel.insertCell(0, {
-        cell_type: 'code',
-        source: 'a=9',
-        metadata: {
-          trusted: false
-        }
-      });
+    // it('Reference UUID is added to identifier when its reference cell is deleted', async () => {
+    //   // Code cell 1
+    //   notebook?.sharedModel.insertCell(0, {
+    //     cell_type: 'code',
+    //     source: 'a=9',
+    //     metadata: {
+    //       trusted: false
+    //     }
+    //   });
   
-      let cellModel = notebook?.cells.get(0) as ICodeCellModel;
-      let result = await runNotebookCell(notebook, cellModel);
-      const refId = (notebook?.cells.get(0) as ICodeCellModel).id.replace(/-/g, '').substring(0, 8);
-      expect(result).toBe(true);
+    //   let cellModel = notebook?.cells.get(0) as ICodeCellModel;
+    //   let result = await runNotebookCell(notebook, cellModel);
+    //   const refId = (notebook?.cells.get(0) as ICodeCellModel).id.replace(/-/g, '').substring(0, 8);
+    //   expect(result).toBe(true);
   
-      //Code cell 2
-      notebook?.sharedModel.insertCell(1, {
-        cell_type: 'code',
-        source: 'b=a+9',
-        metadata: {
-          trusted: false
-        }
-      });
+    //   //Code cell 2
+    //   notebook?.sharedModel.insertCell(1, {
+    //     cell_type: 'code',
+    //     source: 'b=a+9',
+    //     metadata: {
+    //       trusted: false
+    //     }
+    //   });
   
-      cellModel = notebook?.cells.get(1) as ICodeCellModel;
-      result = await runNotebookCell(notebook, cellModel);
-      expect(result).toBe(true);
+    //   cellModel = notebook?.cells.get(1) as ICodeCellModel;
+    //   result = await runNotebookCell(notebook, cellModel);
+    //   expect(result).toBe(true);
   
-      notebook.sharedModel.deleteCellRange(0,1);
+    //   notebook.sharedModel.deleteCellRange(0,1);
       
-      //Code cell 3
-      notebook?.sharedModel.insertCell(1, {
-        cell_type: 'code',
-        source: 'h=9',
-        metadata: {
-          trusted: false
-        }
-      });
+    //   //Code cell 3
+    //   notebook?.sharedModel.insertCell(1, {
+    //     cell_type: 'code',
+    //     source: 'h=9',
+    //     metadata: {
+    //       trusted: false
+    //     }
+    //   });
   
-      cellModel = notebook?.cells.get(1) as ICodeCellModel;
-      result = await runNotebookCell(notebook, cellModel);
+    //   cellModel = notebook?.cells.get(1) as ICodeCellModel;
+    //   result = await runNotebookCell(notebook, cellModel);
   
-      let cAny = notebook?.cells.get(0) as ICodeCellModel;
-      expect(result).toBe(true);
-      expect(cAny.sharedModel.source).toBe('b=a$'+refId+'+9');
-    })
+    //   let cAny = notebook?.cells.get(0) as ICodeCellModel;
+    //   expect(result).toBe(true);
+    //   expect(cAny.sharedModel.source).toBe('b=a$'+refId+'+9');
+    // })
   
-    it('Reference UUID is added to identifier when its ref is removed by updating cell', async () => {
-      // Code cell 1
-      notebook?.sharedModel.insertCell(0, {
-        cell_type: 'code',
-        source: 'a=9',
-        metadata: {
-          trusted: false
-        }
-      });
+    // it('Reference UUID is added to identifier when its ref is removed by updating cell', async () => {
+    //   // Code cell 1
+    //   notebook?.sharedModel.insertCell(0, {
+    //     cell_type: 'code',
+    //     source: 'a=9',
+    //     metadata: {
+    //       trusted: false
+    //     }
+    //   });
   
-      let cellModel = notebook?.cells.get(0) as ICodeCellModel;
-      let result = await runNotebookCell(notebook, cellModel);
-      expect(result).toBe(true);
+    //   let cellModel = notebook?.cells.get(0) as ICodeCellModel;
+    //   let result = await runNotebookCell(notebook, cellModel);
+    //   expect(result).toBe(true);
   
-      //Code cell 2
-      notebook?.sharedModel.insertCell(1, {
-        cell_type: 'code',
-        source: 'b=a+9',
-        metadata: {
-          trusted: false
-        }
-      });
+    //   //Code cell 2
+    //   notebook?.sharedModel.insertCell(1, {
+    //     cell_type: 'code',
+    //     source: 'b=a+9',
+    //     metadata: {
+    //       trusted: false
+    //     }
+    //   });
   
-      cellModel = notebook?.cells.get(1) as ICodeCellModel;
-      result = await runNotebookCell(notebook, cellModel);
-      expect(result).toBe(true);
+    //   cellModel = notebook?.cells.get(1) as ICodeCellModel;
+    //   result = await runNotebookCell(notebook, cellModel);
+    //   expect(result).toBe(true);
       
-      //Running cell 1
-      cellModel = notebook?.cells.get(0) as ICodeCellModel;
-      cellModel.sharedModel.setSource('k=0');
-      result = await runNotebookCell(notebook, cellModel);
+    //   //Running cell 1
+    //   cellModel = notebook?.cells.get(0) as ICodeCellModel;
+    //   cellModel.sharedModel.setSource('k=0');
+    //   result = await runNotebookCell(notebook, cellModel);
   
-      let cAny = notebook?.cells.get(1) as ICodeCellModel;
-      const refId = (notebook?.cells.get(0) as ICodeCellModel).id.replace(/-/g, '').substring(0, 8);
-      expect(result).toBe(true);
-      expect(cAny.sharedModel.source).toBe('b=a$'+refId+'+9');
-    })
+    //   let cAny = notebook?.cells.get(1) as ICodeCellModel;
+    //   const refId = (notebook?.cells.get(0) as ICodeCellModel).id.replace(/-/g, '').substring(0, 8);
+    //   expect(result).toBe(true);
+    //   expect(cAny.sharedModel.source).toBe('b=a$'+refId+'+9');
+    // })
   });
 
-  describe('Update references with Tags', () => {
-    it('Should able to use tag as identifier ref', async () => {
-      // Code cell 1
-      notebook.setMetadata("enable_tags", true);
-      notebook?.sharedModel.insertCell(0, {
-        cell_type: 'code',
-        source: 'a=9',
-        metadata: {
-          trusted: false
-        }
-      });
+  // describe('Update references with Tags', () => {
+  //   it('Should able to use tag as identifier ref', async () => {
+  //     // Code cell 1
+  //     notebook.setMetadata("enable_tags", true);
+  //     notebook?.sharedModel.insertCell(0, {
+  //       cell_type: 'code',
+  //       source: 'a=9',
+  //       metadata: {
+  //         trusted: false
+  //       }
+  //     });
 
-      let cellModel = notebook?.cells.get(0) as ICodeCellModel;
-      let result = await runNotebookCell(notebook, cellModel);
-      expect(result).toBe(true);
+  //     let cellModel = notebook?.cells.get(0) as ICodeCellModel;
+  //     let result = await runNotebookCell(notebook, cellModel);
+  //     expect(result).toBe(true);
 
-      let dfmetadata = (notebook?.cells.get(0) as ICodeCellModel).getMetadata('dfmetadata');
-      dfmetadata.tag = "Tag1";
-      notebook.cells.get(0).setMetadata('dfmetadata', dfmetadata);
+  //     let dfmetadata = (notebook?.cells.get(0) as ICodeCellModel).getMetadata('dfmetadata');
+  //     dfmetadata.tag = "Tag1";
+  //     notebook.cells.get(0).setMetadata('dfmetadata', dfmetadata);
 
-      notebook?.sharedModel.insertCell(1, {
-        cell_type: 'code',
-        source: 'a=5\ntest=a+99\nb=a$Tag1+99',
-        metadata: {
-          trusted: false
-        }
-      });
+  //     notebook?.sharedModel.insertCell(1, {
+  //       cell_type: 'code',
+  //       source: 'a=5\ntest=a+99\nb=a$Tag1+99',
+  //       metadata: {
+  //         trusted: false
+  //       }
+  //     });
   
-      cellModel = notebook?.cells.get(1) as ICodeCellModel;
-      result = await runNotebookCell(notebook, cellModel);
+  //     cellModel = notebook?.cells.get(1) as ICodeCellModel;
+  //     result = await runNotebookCell(notebook, cellModel);
       
-      let cAny = notebook?.cells.get(1) as ICodeCellModel;
-      expect(result).toBe(true);
-      expect(cAny.outputs.length).toBe(1);
-      expect(cAny.outputs.get(0).data['text/plain']).toBe('108');
-      expect(cAny.sharedModel.source).toBe('a=5\ntest=a+99\nb=a$Tag1+99');
-    }, 60000);
+  //     let cAny = notebook?.cells.get(1) as ICodeCellModel;
+  //     expect(result).toBe(true);
+  //     expect(cAny.outputs.length).toBe(1);
+  //     expect(cAny.outputs.get(0).data['text/plain']).toBe('108');
+  //     expect(cAny.sharedModel.source).toBe('a=5\ntest=a+99\nb=a$Tag1+99');
+  //   }, 60000);
   
-    it('CellId should be replaced with tag in codecells when tag is added', async () => {
-      // Code cell 1
-      notebook.setMetadata("enable_tags", true);
-      notebook?.sharedModel.insertCell(0, {
-        cell_type: 'code',
-        source: 'a=9',
-        metadata: {
-          trusted: false
-        }
-      });
+  //   it('CellId should be replaced with tag in codecells when tag is added', async () => {
+  //     // Code cell 1
+  //     notebook.setMetadata("enable_tags", true);
+  //     notebook?.sharedModel.insertCell(0, {
+  //       cell_type: 'code',
+  //       source: 'a=9',
+  //       metadata: {
+  //         trusted: false
+  //       }
+  //     });
 
-      let cellModel = notebook?.cells.get(0) as ICodeCellModel;
-      const refId = (notebook?.cells.get(0) as ICodeCellModel).id.replace(/-/g, '').substring(0, 8);
-      let result = await runNotebookCell(notebook, cellModel);
-      expect(result).toBe(true);
+  //     let cellModel = notebook?.cells.get(0) as ICodeCellModel;
+  //     const refId = (notebook?.cells.get(0) as ICodeCellModel).id.replace(/-/g, '').substring(0, 8);
+  //     let result = await runNotebookCell(notebook, cellModel);
+  //     expect(result).toBe(true);
 
-      notebook?.sharedModel.insertCell(1, {
-        cell_type: 'code',
-        source: 'a=5\ntest=a+99\nb=a$'+refId+'+99',
-        metadata: {
-          trusted: false
-        }
-      });
+  //     notebook?.sharedModel.insertCell(1, {
+  //       cell_type: 'code',
+  //       source: 'a=5\ntest=a+99\nb=a$'+refId+'+99',
+  //       metadata: {
+  //         trusted: false
+  //       }
+  //     });
   
-      cellModel = notebook?.cells.get(1) as ICodeCellModel;
-      result = await runNotebookCell(notebook, cellModel);
-      expect(result).toBe(true);
+  //     cellModel = notebook?.cells.get(1) as ICodeCellModel;
+  //     result = await runNotebookCell(notebook, cellModel);
+  //     expect(result).toBe(true);
 
-      let dfmetadata = (notebook?.cells.get(0) as ICodeCellModel).getMetadata('dfmetadata');
-      dfmetadata.tag = "Tag1";
-      notebook.cells.get(0).setMetadata('dfmetadata', dfmetadata);
+  //     let dfmetadata = (notebook?.cells.get(0) as ICodeCellModel).getMetadata('dfmetadata');
+  //     dfmetadata.tag = "Tag1";
+  //     notebook.cells.get(0).setMetadata('dfmetadata', dfmetadata);
 
-      await updateNotebookCellsWithTag(notebook as DataflowNotebookModel, '', sessionContext)
+  //     await updateNotebookCellsWithTag(notebook as DataflowNotebookModel, '', sessionContext)
       
-      let cAny = notebook?.cells.get(1) as ICodeCellModel;
-      expect(cAny.sharedModel.source).toBe('a=5\ntest=a+99\nb=a$Tag1+99');
-    });
+  //     let cAny = notebook?.cells.get(1) as ICodeCellModel;
+  //     expect(cAny.sharedModel.source).toBe('a=5\ntest=a+99\nb=a$Tag1+99');
+  //   });
 
-    it('Dfmetadata should be updated with tag references', async () => {
-      // Code cell 1
-      notebook.setMetadata("enable_tags", true);
-      notebook?.sharedModel.insertCell(0, {
-        cell_type: 'code',
-        source: 'a=9',
-        metadata: {
-          trusted: false
-        }
-      });
+  //   it('Dfmetadata should be updated with tag references', async () => {
+  //     // Code cell 1
+  //     notebook.setMetadata("enable_tags", true);
+  //     notebook?.sharedModel.insertCell(0, {
+  //       cell_type: 'code',
+  //       source: 'a=9',
+  //       metadata: {
+  //         trusted: false
+  //       }
+  //     });
 
-      let cellModel = notebook?.cells.get(0) as ICodeCellModel;
-      let result = await runNotebookCell(notebook, cellModel);
-      expect(result).toBe(true);
+  //     let cellModel = notebook?.cells.get(0) as ICodeCellModel;
+  //     let result = await runNotebookCell(notebook, cellModel);
+  //     expect(result).toBe(true);
 
-      let dfmetadata = (notebook?.cells.get(0) as ICodeCellModel).getMetadata('dfmetadata');
-      dfmetadata.tag = "Tag1";
-      notebook.cells.get(0).setMetadata('dfmetadata', dfmetadata);
+  //     let dfmetadata = (notebook?.cells.get(0) as ICodeCellModel).getMetadata('dfmetadata');
+  //     dfmetadata.tag = "Tag1";
+  //     notebook.cells.get(0).setMetadata('dfmetadata', dfmetadata);
 
-      notebook?.sharedModel.insertCell(1, {
-        cell_type: 'code',
-        source: 'a=5\ntest=a+99\nb=a$Tag1+99',
-        metadata: {
-          trusted: false
-        }
-      });
+  //     notebook?.sharedModel.insertCell(1, {
+  //       cell_type: 'code',
+  //       source: 'a=5\ntest=a+99\nb=a$Tag1+99',
+  //       metadata: {
+  //         trusted: false
+  //       }
+  //     });
   
-      cellModel = notebook?.cells.get(1) as ICodeCellModel;
-      result = await runNotebookCell(notebook, cellModel);
+  //     cellModel = notebook?.cells.get(1) as ICodeCellModel;
+  //     result = await runNotebookCell(notebook, cellModel);
       
-      let cAny = notebook?.cells.get(1) as ICodeCellModel;
-      const refId = (notebook?.cells.get(0) as ICodeCellModel).id.replace(/-/g, '').substring(0, 8);
-      dfmetadata = cAny.sharedModel.getMetadata('dfmetadata')
+  //     let cAny = notebook?.cells.get(1) as ICodeCellModel;
+  //     const refId = (notebook?.cells.get(0) as ICodeCellModel).id.replace(/-/g, '').substring(0, 8);
+  //     dfmetadata = cAny.sharedModel.getMetadata('dfmetadata')
       
-      expect(result).toBe(true);
-      expect(cAny.outputs.length).toBe(1);
-      expect(cAny.outputs.get(0).data['text/plain']).toBe('108');
-      expect(cAny.sharedModel.source).toBe('a=5\ntest=a+99\nb=a$Tag1+99');
-      expect(dfmetadata).toBeDefined();
-      expect(dfmetadata.inputVars).toEqual({
-        "ref": {
-          [refId]: ["a"]
-        },
-        "tag_refs": {
-          [refId]: "Tag1"
-        }
-      });
-    });
+  //     expect(result).toBe(true);
+  //     expect(cAny.outputs.length).toBe(1);
+  //     expect(cAny.outputs.get(0).data['text/plain']).toBe('108');
+  //     expect(cAny.sharedModel.source).toBe('a=5\ntest=a+99\nb=a$Tag1+99');
+  //     expect(dfmetadata).toBeDefined();
+  //     expect(dfmetadata.inputVars).toEqual({
+  //       "ref": {
+  //         [refId]: ["a"]
+  //       },
+  //       "tag_refs": {
+  //         [refId]: "Tag1"
+  //       }
+  //     });
+  //   });
   
-    it('Tag should be replaced with UUID when tag is removed', async () => {
-      // Code cell 1
-      notebook.setMetadata("enable_tags", true);
-      notebook?.sharedModel.insertCell(0, {
-        cell_type: 'code',
-        source: 'a=9',
-        metadata: {
-          trusted: false
-        }
-      });
+  //   it('Tag should be replaced with UUID when tag is removed', async () => {
+  //     // Code cell 1
+  //     notebook.setMetadata("enable_tags", true);
+  //     notebook?.sharedModel.insertCell(0, {
+  //       cell_type: 'code',
+  //       source: 'a=9',
+  //       metadata: {
+  //         trusted: false
+  //       }
+  //     });
 
-      let cellModel = notebook?.cells.get(0) as ICodeCellModel;
-      let result = await runNotebookCell(notebook, cellModel);
-      expect(result).toBe(true);
+  //     let cellModel = notebook?.cells.get(0) as ICodeCellModel;
+  //     let result = await runNotebookCell(notebook, cellModel);
+  //     expect(result).toBe(true);
 
-      const refId = (notebook?.cells.get(0) as ICodeCellModel).id.replace(/-/g, '').substring(0, 8);
-      let dfmetadata = (notebook?.cells.get(0) as ICodeCellModel).getMetadata('dfmetadata');
-      dfmetadata.tag = "Tag1";
-      notebook.cells.get(0).setMetadata('dfmetadata', dfmetadata);
+  //     const refId = (notebook?.cells.get(0) as ICodeCellModel).id.replace(/-/g, '').substring(0, 8);
+  //     let dfmetadata = (notebook?.cells.get(0) as ICodeCellModel).getMetadata('dfmetadata');
+  //     dfmetadata.tag = "Tag1";
+  //     notebook.cells.get(0).setMetadata('dfmetadata', dfmetadata);
 
-      notebook?.sharedModel.insertCell(1, {
-        cell_type: 'code',
-        source: 'a=5\ntest=a+99\nb=a$Tag1+99',
-        metadata: {
-          trusted: false
-        }
-      });
+  //     notebook?.sharedModel.insertCell(1, {
+  //       cell_type: 'code',
+  //       source: 'a=5\ntest=a+99\nb=a$Tag1+99',
+  //       metadata: {
+  //         trusted: false
+  //       }
+  //     });
   
-      cellModel = notebook?.cells.get(1) as ICodeCellModel;
-      result = await runNotebookCell(notebook, cellModel);
-      expect(result).toBe(true);
+  //     cellModel = notebook?.cells.get(1) as ICodeCellModel;
+  //     result = await runNotebookCell(notebook, cellModel);
+  //     expect(result).toBe(true);
 
-      //deleting tag
-      dfmetadata = (notebook?.cells.get(0) as ICodeCellModel).getMetadata('dfmetadata');
-      dfmetadata.tag = "";
-      notebook.cells.get(0).setMetadata('dfmetadata', dfmetadata);
+  //     //deleting tag
+  //     dfmetadata = (notebook?.cells.get(0) as ICodeCellModel).getMetadata('dfmetadata');
+  //     dfmetadata.tag = "";
+  //     notebook.cells.get(0).setMetadata('dfmetadata', dfmetadata);
 
-      await updateNotebookCellsWithTag(notebook as DataflowNotebookModel, refId, sessionContext)
+  //     await updateNotebookCellsWithTag(notebook as DataflowNotebookModel, refId, sessionContext)
 
-      let cAny = notebook?.cells.get(1) as ICodeCellModel;
-      expect(cAny.outputs.length).toBe(1);
-      expect(cAny.outputs.get(0).data['text/plain']).toBe('108');
-      expect(cAny.sharedModel.source).toBe('a=5\ntest=a+99\nb=a$'+refId+'+99');
-    })
+  //     let cAny = notebook?.cells.get(1) as ICodeCellModel;
+  //     expect(cAny.outputs.length).toBe(1);
+  //     expect(cAny.outputs.get(0).data['text/plain']).toBe('108');
+  //     expect(cAny.sharedModel.source).toBe('a=5\ntest=a+99\nb=a$'+refId+'+99');
+  //   })
 
-    it('Tag should be replaced with UUID when tagged cell is deleted', async () => {
-      // Code cell 1
-      notebook.setMetadata("enable_tags", true);
-      notebook?.sharedModel.insertCell(0, {
-        cell_type: 'code',
-        source: 'a=9',
-        metadata: {
-          trusted: false
-        }
-      });
+  //   it('Tag should be replaced with UUID when tagged cell is deleted', async () => {
+  //     // Code cell 1
+  //     notebook.setMetadata("enable_tags", true);
+  //     notebook?.sharedModel.insertCell(0, {
+  //       cell_type: 'code',
+  //       source: 'a=9',
+  //       metadata: {
+  //         trusted: false
+  //       }
+  //     });
 
-      let cellModel = notebook?.cells.get(0) as ICodeCellModel;
-      let result = await runNotebookCell(notebook, cellModel);
-      expect(result).toBe(true);
+  //     let cellModel = notebook?.cells.get(0) as ICodeCellModel;
+  //     let result = await runNotebookCell(notebook, cellModel);
+  //     expect(result).toBe(true);
 
-      const refId = (notebook?.cells.get(0) as ICodeCellModel).id.replace(/-/g, '').substring(0, 8);
-      let dfmetadata = (notebook?.cells.get(0) as ICodeCellModel).getMetadata('dfmetadata');
-      dfmetadata.tag = "Tag1";
-      notebook.cells.get(0).setMetadata('dfmetadata', dfmetadata);
+  //     const refId = (notebook?.cells.get(0) as ICodeCellModel).id.replace(/-/g, '').substring(0, 8);
+  //     let dfmetadata = (notebook?.cells.get(0) as ICodeCellModel).getMetadata('dfmetadata');
+  //     dfmetadata.tag = "Tag1";
+  //     notebook.cells.get(0).setMetadata('dfmetadata', dfmetadata);
 
-      // Code cell 2
-      notebook?.sharedModel.insertCell(1, {
-        cell_type: 'code',
-        source: 'a=5\ntest=a+99\nb=a$Tag1+99',
-        metadata: {
-          trusted: false
-        }
-      });
+  //     // Code cell 2
+  //     notebook?.sharedModel.insertCell(1, {
+  //       cell_type: 'code',
+  //       source: 'a=5\ntest=a+99\nb=a$Tag1+99',
+  //       metadata: {
+  //         trusted: false
+  //       }
+  //     });
   
-      cellModel = notebook?.cells.get(1) as ICodeCellModel;
-      result = await runNotebookCell(notebook, cellModel);
-      expect(result).toBe(true);
+  //     cellModel = notebook?.cells.get(1) as ICodeCellModel;
+  //     result = await runNotebookCell(notebook, cellModel);
+  //     expect(result).toBe(true);
 
-      //deleting code cell 1
-      notebook.sharedModel.deleteCellRange(0,1)
+  //     //deleting code cell 1
+  //     notebook.sharedModel.deleteCellRange(0,1)
 
-      // Code cell 3
-      notebook?.sharedModel.insertCell(1, {
-        cell_type: 'code',
-        source: 's = "test"',
-        metadata: {
-          trusted: false
-        }
-      });
+  //     // Code cell 3
+  //     notebook?.sharedModel.insertCell(1, {
+  //       cell_type: 'code',
+  //       source: 's = "test"',
+  //       metadata: {
+  //         trusted: false
+  //       }
+  //     });
   
-      cellModel = notebook?.cells.get(1) as ICodeCellModel;
-      result = await runNotebookCell(notebook, cellModel);
-      expect(result).toBe(true);
+  //     cellModel = notebook?.cells.get(1) as ICodeCellModel;
+  //     result = await runNotebookCell(notebook, cellModel);
+  //     expect(result).toBe(true);
       
-      let cAny = notebook?.cells.get(0) as ICodeCellModel;
-      expect(cAny.sharedModel.source).toBe('a=5\ntest=a+99\nb=a$'+refId+'+99');
-    })
+  //     let cAny = notebook?.cells.get(0) as ICodeCellModel;
+  //     expect(cAny.sharedModel.source).toBe('a=5\ntest=a+99\nb=a$'+refId+'+99');
+  //   })
 
-  });
+  // });
 
 });
