@@ -206,12 +206,7 @@ describe('Identifier reference update', () => {
           if (!notebook.getMetadata('enable_tags')) {
             dfData.dfMetadata.input_tags = {};
           }
-          comm.send({
-            'dfMetadata': dfData.dfMetadata
-          });
 
-          console.log('***************COMM MSG SENT************************************************');
-        
           comm.onMsg = (msg) => {
             console.log('***************COMM MSG REC************************************************', msg.content.data);
             const content = msg.content.data;
@@ -230,6 +225,15 @@ describe('Identifier reference update', () => {
             }
             resolve(); // Resolve the promise when the message is received
           };
+
+
+          comm.send({
+            'dfMetadata': dfData.dfMetadata
+          });
+
+          console.log('***************COMM MSG SENT************************************************');
+        
+          
         } else {
           resolve(); // Resolve immediately if comm is not created
         }
@@ -264,7 +268,7 @@ describe('Identifier reference update', () => {
       // expect(cAny.outputs.length).toBe(1);
       // expect(cAny.outputs.get(0).data['text/plain']).toBe('18');
       // expect(cAny.sharedModel.source).toBe('b=a+9');
-    }, 120000);
+    });
     
     
     // it('Reference UUID is not added when identifier is exported only once', async () => {
