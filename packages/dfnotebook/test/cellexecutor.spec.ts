@@ -21,6 +21,8 @@ describe('Identifier reference update', () => {
   beforeAll(async () => {
     rendermime = utils.defaultRenderMime();
     await server.start({'additionalKernelSpecs':{'dfpython3':{'argv':['python','-m','dfkernel','-f','{connection_file}'],'display_name':'DFPython 3','language':'python'}}});
+    console.log('********************************************Kernel creating');
+    
     sessionContext = await createSessionContext(
       {'kernelPreference':
       {'name':'dfpython3','autoStartDefault':true,'shouldStart':true}});
@@ -29,6 +31,8 @@ describe('Identifier reference update', () => {
     await sessionContext.session?.kernel?.info;
     await sessionContext.session?.id;
     await sessionContext.startKernel();
+    console.log('********************************************Kernel started, status:', sessionContext.session?.kernel?.status);
+    console.log('*******Kernel info:', await sessionContext.session?.kernel?.info);
   }, 30000);
 
   afterAll(async () => {
@@ -50,7 +54,7 @@ describe('Identifier reference update', () => {
     widget.model = model;
     model.sharedModel.clearUndoHistory();
     widget.activeCellIndex = 0;
-
+    console.log('*********************************************Before each test, kernel status:', sessionContext.session?.kernel?.status);
     notebook = widget.model;
     if (!notebook) {
       throw new Error('Notebook model is null');
@@ -112,7 +116,8 @@ describe('Identifier reference update', () => {
           trusted: false
         }
       });
-  
+      
+      console.log('***************************************************************Cell 0 created, about to run cell');
       let cellModel = notebook?.cells.get(0) as ICodeCellModel;
       let result = await runNotebookCell(notebook, cellModel);
       
@@ -121,7 +126,8 @@ describe('Identifier reference update', () => {
       expect(result).toBe(true);
       expect(cAny.outputs.length).toBe(1);
       expect(cAny.outputs.get(0).data['text/plain']).toBe('9');
-  
+
+      console.log('************************************************************************Cell 1 created, about to run cell');
       //Code cell 2
       notebook.sharedModel.insertCell(1, {
         cell_type: 'code',
