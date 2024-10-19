@@ -201,11 +201,10 @@ describe('Identifier reference update', () => {
       const commPromise = new Promise<void>(async (resolve) => {
         let comm = sessionContext.session?.kernel?.createComm('dfcode');
         if (comm) {
-          comm.open();
-          dfData = getdfData(widget.model as DataflowNotebookModel, '');
-          if (!notebook.getMetadata('enable_tags')) {
-            dfData.dfMetadata.input_tags = {};
-          }
+          
+          comm.onClose = (msg) => {
+            console.error('Comm closed unexpectedly:', msg);
+          };
 
           comm.onMsg = (msg) => {
             console.log('***************COMM MSG REC************************************************', msg.content.data);
@@ -226,13 +225,18 @@ describe('Identifier reference update', () => {
             resolve(); // Resolve the promise when the message is received
           };
 
+          comm.open();
+          dfData = getdfData(widget.model as DataflowNotebookModel, '');
+          if (!notebook.getMetadata('enable_tags')) {
+            dfData.dfMetadata.input_tags = {};
+          }
 
           comm.send({
             'dfMetadata': dfData.dfMetadata
           });
 
           console.log('***************COMM MSG SENT************************************************');
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          await new Promise(resolve => setTimeout(resolve, 5000));
           
         } else {
           resolve(); // Resolve immediately if comm is not created
