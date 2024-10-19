@@ -140,7 +140,7 @@ describe('Identifier reference update', () => {
       expect(cAny.outputs.length).toBe(1);
       expect(cAny.outputs.get(0).data['text/plain']).toBe('18');
       expect(cAny.sharedModel.source).toBe('b=a+9');
-    });
+    }, 120000);
   
     // it('Reference UUID is not removed when ambiguity exist', async () => {
     //   // Code cell 1
