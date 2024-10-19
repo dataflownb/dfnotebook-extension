@@ -32,6 +32,7 @@ describe('Identifier reference update', () => {
   }, 30000);
 
   afterAll(async () => {
+    await sessionContext.shutdown();
     await server.shutdown();
   });
   
@@ -56,9 +57,9 @@ describe('Identifier reference update', () => {
     }
   });
     
-  afterEach(() => {
-    return sessionContext.shutdown();
-  });
+  // afterEach(() => {
+  //   return sessionContext.shutdown();
+  // });
 
   async function runNotebookCell(notebook: INotebookModel, cellModel: ICodeCellModel) {
     const cell = new DataflowCodeCell({
