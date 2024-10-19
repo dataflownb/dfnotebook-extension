@@ -198,7 +198,7 @@ describe('Identifier reference update', () => {
         }
       }
       
-      const commPromise = new Promise<void>((resolve) => {
+      const commPromise = new Promise<void>(async (resolve) => {
         let comm = sessionContext.session?.kernel?.createComm('dfcode');
         if (comm) {
           comm.open();
@@ -232,7 +232,7 @@ describe('Identifier reference update', () => {
           });
 
           console.log('***************COMM MSG SENT************************************************');
-        
+          await new Promise(resolve => setTimeout(resolve, 2000));
           
         } else {
           resolve(); // Resolve immediately if comm is not created
