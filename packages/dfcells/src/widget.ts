@@ -121,6 +121,18 @@ function setOutputArea(cell: CodeCell) {
   cell._output = dfOutput;
 }
 
+function setDFMetadata(cell: CodeCell) {
+  if (!cell.model.getMetadata('dfmetadata')){
+    const dfmetadata = {
+      tag: "",
+      inputVars: { ref: {}, tag_refs: {} },
+      outputVars: [],
+      persistentCode: ""
+    };
+    cell.model.setMetadata('dfmetadata', dfmetadata);
+  }
+}
+
 export class DataflowCell<T extends ICellModel = ICellModel> extends Cell<T> {
   protected initializeDOM(): void {
     super.initializeDOM();
@@ -152,6 +164,9 @@ export class DataflowMarkdownCell extends MarkdownCell {
     super.initializeDOM();
     setInputArea(this);
     this.addClass('df-cell');
+    if(this.model.getMetadata('dfmetadata')){
+      this.model.deleteMetadata('dfmetadata')
+    }
   }
 }
 
@@ -160,6 +175,9 @@ export class DataflowRawCell extends RawCell {
     super.initializeDOM();
     setInputArea(this);
     this.addClass('df-cell');
+    if(this.model.getMetadata('dfmetadata')){
+      this.model.deleteMetadata('dfmetadata')
+    }
   }
 }
 
@@ -190,6 +208,8 @@ export class DataflowCodeCell extends CodeCell {
   initializeState(): this {
     super.initializeState();
     this.setPromptToId();
+    setDFMetadata(this);
+    this.model.contentChanged.connect(this._onContentChanged, this);
     return this;
   }
 
@@ -201,6 +221,17 @@ export class DataflowCodeCell extends CodeCell {
         break;
       default:
         break;
+    }
+  }
+
+  private _onContentChanged(): void {
+    let currentCode = this.model.sharedModel.getSource().trim();
+    let persistentCode = this.model.getMetadata('dfmetadata').persistentCode.trim();
+    if (persistentCode != '' && persistentCode == currentCode){
+      this.node.classList.add('df-cell-not-dirty');
+    }
+    else if(persistentCode != '') {
+      this.node.classList.remove('df-cell-not-dirty');
     }
   }
 }
@@ -250,7 +281,7 @@ export namespace DataflowCodeCell {
           cellIdOutputsMap[cellId] = cellIdModelMap[cellId].outputs;
         }
       }
-
+      
       const msgPromise = DataflowOutputArea.execute(
         code,
         cell.outputArea,
@@ -345,6 +376,7 @@ export namespace DataflowCodeCell {
       let internalNodes = content.internal_nodes;
       let sessId = sessionContext.session.id;
       let graphUndefined = false;
+      
       //Set information about the graph based on sessionid
       if(GraphManager.graphs[sessId] === undefined){
         GraphManager.createGraph(sessId);
@@ -357,7 +389,7 @@ export namespace DataflowCodeCell {
       }
 
        if (content.update_downstreams) {
-                    GraphManager.graphs[sessId].updateDownLinks(content.update_downstreams);
+          GraphManager.graphs[sessId].updateDownLinks(content.update_downstreams);
       }
 
       return msg;
