@@ -235,7 +235,7 @@ describe('Identifier reference update', () => {
           });
 
           console.log('***************COMM MSG SENT************************************************');
-          await new Promise(resolve => setTimeout(resolve, 5000));
+          await new Promise(resolve => setTimeout(resolve, 10000));
           
         } else {
           resolve(); // Resolve immediately if comm is not created
