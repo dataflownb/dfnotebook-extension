@@ -201,11 +201,6 @@ describe('Identifier reference update', () => {
       const commPromise = new Promise<void>(async (resolve) => {
         let comm = sessionContext.session?.kernel?.createComm('dfcode');
         if (comm) {
-          
-          comm.onClose = (msg) => {
-            console.error('Comm closed unexpectedly:', msg);
-          };
-
           comm.onMsg = (msg) => {
             console.log('***************COMM MSG REC************************************************', msg.content.data);
             const content = msg.content.data;
@@ -223,6 +218,10 @@ describe('Identifier reference update', () => {
               }
             }
             resolve(); // Resolve the promise when the message is received
+          };
+
+          comm.onClose = (msg) => {
+            console.log('Comm closed unexpectedly:', msg);
           };
 
           comm.open();
