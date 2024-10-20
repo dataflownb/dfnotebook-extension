@@ -230,6 +230,7 @@ describe('Identifier reference update', () => {
             dfData.dfMetadata.input_tags = {};
           }
 
+          await new Promise(resolve => setTimeout(resolve, 1000));
           comm.send({
             'dfMetadata': dfData.dfMetadata
           });
