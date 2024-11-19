@@ -76,12 +76,14 @@ import { CommandRegistry } from '@lumino/commands';
 import {
   JSONExt,
   JSONObject,
+  PromiseDelegate,
   ReadonlyJSONValue,
   ReadonlyPartialJSONObject,
   UUID
 } from '@lumino/coreutils';
 import { DisposableSet } from '@lumino/disposable';
-import { Panel } from '@lumino/widgets';
+import { Menu, Panel, Widget } from '@lumino/widgets';
+import { showErrorMessage } from '@jupyterlab/apputils';
 
 import {
   DataflowNotebookModel,
@@ -657,7 +659,149 @@ const cellToolbar: JupyterFrontEndPlugin<void> = {
   },
   optional: [ISettingRegistry, IToolbarWidgetRegistry, ITranslator]
 };
-    
+
+const ExportNotebook: JupyterFrontEndPlugin<void> = {
+  id: 'export-as-ipykernel-notebook',
+  autoStart: true,
+  requires: [IMainMenu, INotebookTracker],
+  activate: (
+    app: JupyterFrontEnd,
+    mainMenu: IMainMenu,
+    notebookTracker: INotebookTracker,
+    labShell: ILabShell
+  ) => {
+    const { commands } = app;
+    const command = 'notebook:export-as-ipykernel-notebook';
+    commands.addCommand(command, {
+      label: 'Ipykernel notebook',
+      execute: async () => {
+        const notebook = notebookTracker.currentWidget;
+        if (notebook) {
+          await handleExportClick(notebook);
+        }
+      },
+      isEnabled: () => {
+        const currentWidget = app.shell.currentWidget;
+        return (
+          currentWidget !== null &&
+          notebookTracker.has(currentWidget) &&
+          currentWidget instanceof NotebookPanel
+        );
+      }
+    });
+
+    labShell?.currentChanged.connect(() => {
+      commands.notifyCommandChanged(command);
+    });
+
+    function createMenuItem(): Menu.IItemOptions {
+      return { command };
+    }
+
+    app.restored.then(() => {
+      const fileMenu = mainMenu.fileMenu;
+      const saveAsMenuItem = fileMenu.items.find(
+        item => item.type === 'submenu' && item.label === 'Save and Export Notebook As'
+      );
+
+      if (saveAsMenuItem && saveAsMenuItem.submenu) {
+        saveAsMenuItem.submenu.addItem(createMenuItem());
+      } else {
+        console.warn('Save and Export Notebook As submenu not found');
+      }
+    });
+
+    async function handleExportClick(nbPanel: NotebookPanel) {
+      if (nbPanel.sessionContext.session?.kernel?.name === 'dfpython3') {
+        const dfPackagesStatus = await dfPackages(nbPanel) as { [key: string]: any };
+        if (dfPackagesStatus && dfPackagesStatus['dfconvert'] === true) {
+          exportAsIpyNotebook(nbPanel);
+        } else {
+          showPackageDialog();
+        }
+      } else {
+        showKernelDialog();
+      }
+    }
+
+    async function dfPackages(nbPanel: NotebookPanel){
+      let kernel = nbPanel.sessionContext.session?.kernel;
+      let result: JSONObject = {};
+      if(kernel){
+        let comm = kernel.createComm('dfpackages');
+        comm.open();
+        comm.send({});
+        const resultPromise = new PromiseDelegate<JSONObject>();
+        comm.onMsg = msg =>
+        resultPromise.resolve((msg.content.data as any) as JSONObject);
+        result = await resultPromise.promise;
+      }
+
+      return result ? result['dfpackages'] : result;
+    }
+
+    async function exportAsIpyNotebook(nbPanel: NotebookPanel){
+      console.log('started exporting to Ipykernel Notebook!');          
+      const notebook = app.shell.currentWidget as NotebookPanel;
+      if (notebook) {
+        const clonedModel = JSON.parse(JSON.stringify(notebook.model?.toJSON()));
+        const kernel = nbPanel.sessionContext.session?.kernel;
+        if(kernel){
+          let comm = kernel.createComm('dfconvert');
+          comm.open();
+          comm.send({'notebook': clonedModel});
+          comm.onMsg = (msg: any) => {
+            var updated_notebook = msg.content.data.notebook;
+            if (!updated_notebook || Object.keys(updated_notebook).length === 0) {
+              showErrorMessage(
+                'Export Failed', 
+                'The notebook export was unsuccessful. Please reload the page and try again, or check your data for any issues.'
+              );
+              return;
+            }
+            const data = new Blob([JSON.stringify(updated_notebook)], { type: 'application/json' });
+            const notebookName = notebook.context.localPath.split('/').pop()?.slice(0, -6);
+            const url = URL.createObjectURL(data);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = notebookName +'_ipy.ipynb';
+            link.click();
+          };
+        }
+      }
+    }
+
+    function showPackageDialog() {
+      const message = `
+      <p>
+      This operation requires the dfconvert package to be installed.<br> 
+      Use the following command for its installation:
+      </p>
+      <code style="background: #eee; border: solid 1px; background-color: #eee; border: 1px solid #999; display: block;
+        padding: 4px;
+        color: #e7439b;
+      ">pip install dfconvert</code>
+      `;
+
+      const body = new Widget({ node: document.createElement('div') });
+      body.node.innerHTML = message;
+
+      void showDialog({
+        title: 'Package Required',
+        body,
+        buttons: [Dialog.okButton()]
+      });
+    }
+
+    function showKernelDialog() {
+      void showDialog({
+        title: 'Incorrect Kernel',
+        body: 'This operation requires a Jupyter notebook with the dfpython3 kernel. Please ensure you are using a dfpython3 kernel notebook and try again.',
+        buttons: [Dialog.okButton()]
+      });
+    }
+  }
+};
 
 const plugins: JupyterFrontEndPlugin<any>[] = [
   cellExecutor,
@@ -667,7 +811,8 @@ const plugins: JupyterFrontEndPlugin<any>[] = [
   cellToolbar,
   DepViewer,
   MiniMap,
-  GraphManagerPlugin
+  GraphManagerPlugin,
+  ExportNotebook
 ];
 export default plugins;
 
