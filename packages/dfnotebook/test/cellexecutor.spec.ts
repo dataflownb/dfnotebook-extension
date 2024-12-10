@@ -467,7 +467,7 @@ describe('Identifier reference update', () => {
       dfmetadata.tag = "Tag1";
       notebook.cells.get(0).setMetadata('dfmetadata', dfmetadata);
 
-      await updateNotebookCellsWithTag(notebook as DataflowNotebookModel, '', sessionContext)
+      await updateNotebookCellsWithTag("", notebook as DataflowNotebookModel, '', sessionContext)
       
       let cAny = notebook?.cells.get(1) as ICodeCellModel;
       expect(cAny.sharedModel.source).toBe('a=5\ntest=a+99\nb=a$Tag1+99');
@@ -559,7 +559,7 @@ describe('Identifier reference update', () => {
       dfmetadata.tag = "";
       notebook.cells.get(0).setMetadata('dfmetadata', dfmetadata);
 
-      await updateNotebookCellsWithTag(notebook as DataflowNotebookModel, refId, sessionContext)
+      await updateNotebookCellsWithTag("", notebook as DataflowNotebookModel, refId, sessionContext)
 
       let cAny = notebook?.cells.get(1) as ICodeCellModel;
       expect(cAny.outputs.length).toBe(1);
