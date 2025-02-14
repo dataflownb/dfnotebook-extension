@@ -432,8 +432,8 @@ const GraphManagerPlugin: JupyterFrontEndPlugin<void> = {
                        downlinks[ref[1]].push(cellId);
                     });
                 })
-                let sessId = session?.session?.id || "None";
-                if(!(sessId in Object.keys(GraphManager.graphs))){
+                let sessId = session?.session?.id;
+                if(sessId && !(sessId in Object.keys(GraphManager.graphs))){
                     //@ts-ignore
                     GraphManager.graphs[sessId] = new Graph({'cells':cells,'nodes':outputTags,'internalNodes':outputTags,'uplinks':uplinks,'downlinks':downlinks,'cellContents':cellContents});
                     GraphManager.updateGraph(sessId);
@@ -616,6 +616,7 @@ const MiniMap: JupyterFrontEndPlugin<void> = {
                 //'right');
 
                 if(!GraphManager.minimap.wasCreated){
+                  if (GraphManager.currentGraph)
                     console.log("Active Graph",GraphManager.graphs[GraphManager.currentGraph])
 
                     // Activate the widget
