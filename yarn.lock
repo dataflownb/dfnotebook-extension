@@ -1757,7 +1757,7 @@ __metadata:
     "@babel/preset-env": ^7
     "@dfnotebook/dfoutputarea": ">0.4.0-a"
     "@dfnotebook/dfutils": ">0.4.0-a"
-    "@jupyter/ydoc": ^1.1.1
+    "@jupyter/ydoc": ^3.0.0
     "@jupyterlab/apputils": ^4.4.5
     "@jupyterlab/attachments": ^4.3.5
     "@jupyterlab/builder": ^4.3.5
@@ -1943,7 +1943,7 @@ __metadata:
     "@babel/core": ^7
     "@babel/preset-env": ^7
     "@dfnotebook/dfcells": ">0.4.0-a"
-    "@jupyter/ydoc": ^1.1.1
+    "@jupyter/ydoc": ^3.0.0
     "@jupyterlab/apputils": ^4.4.5
     "@jupyterlab/builder": ^4.3.5
     "@jupyterlab/cells": ^4.3.5
@@ -2588,20 +2588,6 @@ __metadata:
     "@microsoft/fast-foundation": ^2.49.4
     "@microsoft/fast-web-utilities": ^5.4.1
   checksum: ec3336247bbabb2e2587c2cf8b9d0e80786b454916dd600b3d6791bf08c3d1e45a7ec1becf366a5491ab56b0be020baa8c50a5b6067961faf5ec904de31243aa
-  languageName: node
-  linkType: hard
-
-"@jupyter/ydoc@npm:^1.1.1":
-  version: 1.1.1
-  resolution: "@jupyter/ydoc@npm:1.1.1"
-  dependencies:
-    "@jupyterlab/nbformat": ^3.0.0 || ^4.0.0-alpha.21 || ^4.0.0
-    "@lumino/coreutils": ^1.11.0 || ^2.0.0
-    "@lumino/disposable": ^1.10.0 || ^2.0.0
-    "@lumino/signaling": ^1.10.0 || ^2.0.0
-    y-protocols: ^1.0.5
-    yjs: ^13.5.40
-  checksum: a239b1dd57cfc9ba36c06ac5032a1b6388849ae01a1d0db0d45094f71fdadf4d473b4bf8becbef0cfcdc85cae505361fbec0822b02da5aa48e06b66f742dd7a0
   languageName: node
   linkType: hard
 

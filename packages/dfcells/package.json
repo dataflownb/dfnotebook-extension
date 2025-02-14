@@ -155,7 +155,7 @@
   "dependencies": {
     "@dfnotebook/dfoutputarea": ">0.4.0-a",
     "@dfnotebook/dfutils": ">0.4.0-a",
-    "@jupyter/ydoc": "^1.1.1",
+    "@jupyter/ydoc": "^3.0.0",
     "@jupyterlab/apputils": "^4.4.5",
     "@jupyterlab/attachments": "^4.3.5",
     "@jupyterlab/cells": "^4.3.5",
