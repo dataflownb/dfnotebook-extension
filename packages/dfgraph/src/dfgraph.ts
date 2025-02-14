@@ -23,21 +23,19 @@ Array.prototype.setAdd = function (item) {
 
 class GraphManager {
   public graphs: { [index: string]: any };
-  currentGraph: string;
+  currentGraph?: string;
   depview: any;
   minimap: any;
   depWidget: any;
   miniWidget: any;
-  activeID: string;
+  activeID?: string;
   tracker: any;
-  previousActive: string;
+  previousActive?: string;
 
   constructor(graphs?: {}) {
     this.graphs = graphs || {};
-    this.currentGraph = 'None';
     this.depview = new DepView();
     this.minimap = new Minimap();
-    this.previousActive = 'None';
   }
 
   getProperty = function (prop: string) {
@@ -66,8 +64,8 @@ class GraphManager {
   };
 
   updateActive = function (activeid?: string, prevActive?: any) {
-    this.activeID = activeid || 'none';
-    this.previousActive = prevActive || 'none';
+    this.activeID = activeid;
+    this.previousActive = prevActive;
     //FIXME: Add depviewer active cell code
     //         if(this.depWidget.is_open){
     //             console.log("Update dep viewer here");
@@ -80,7 +78,7 @@ class GraphManager {
   /** @method attempt to update the active graph using the tracker this is not preferred **/
   updateActiveGraph = function () {
     this.currentGraph =
-      this.tracker.currentWidget.sessionContext.session?.id || 'None';
+      this.tracker.currentWidget.sessionContext.session?.id;
     this.depview.dfgraph = this.graphs[this.currentGraph];
     this.minimap.setGraph(this.graphs[this.currentGraph]);
     this.updateDepViews(true, false, true);
@@ -105,7 +103,7 @@ class GraphManager {
   };
 
   getStale = function (uuid: string) {
-    return this.graphs[this.currentGraph].states[uuid];
+    return this.graphs[this.currentGraph]?.states[uuid];
   };
 
   getActive = function () {
