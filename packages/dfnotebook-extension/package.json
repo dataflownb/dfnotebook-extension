@@ -31,14 +31,11 @@
     "lib": "lib/"
   },
   "files": [
-    "lib/**/*.d.ts",
-    "lib/**/*.js.map",
-    "lib/**/*.js",
-    "schema/*.json",
-    "style/*.css",
+    "lib/*.{d.ts,js.map,js,json}",
+    "style/**/*.{css,eot,gif,html,jpg,json,png,svg,woff2,ttf}",
     "style/index.js",
-    "src/**/*.{d.ts,ts,tsx}",
-    "style/tag.svg"
+    "src/**/*.{ts,tsx}",
+    "schema/*.json"
   ],
   "scripts": {
     "build": "jlpm build:lib && jlpm build:labextension:dev",
