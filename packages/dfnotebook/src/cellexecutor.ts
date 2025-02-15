@@ -102,9 +102,7 @@ import { truncateCellId } from '@dfnotebook/dfutils';
                   dfData.dfMetadata,
                   dfData.cellIdModelMap
               );
-              
-              resetCellPrompt(notebook, cell)
-              
+                            
               if (reply) {
                 await updateDataflowMetadata(notebook, reply, notebookId);
               }
@@ -292,21 +290,6 @@ import { truncateCellId } from '@dfnotebook/dfutils';
     return tagRefs;
   }
 
-  function resetCellPrompt(notebook: DataflowNotebookModel, cell: Cell) {
-    const currInputArea = cell.inputArea as any;
-    const dfmetadata = cell.model?.getMetadata('dfmetadata');
-    const currTag = dfmetadata.tag;
-    if(currInputArea){
-      if(!notebook.getMetadata('enable_tags')){
-        currInputArea.addTag("");
-        cell.model?.setMetadata('dfmetadata', dfmetadata);
-      }
-      else{
-        currInputArea.addTag(currTag);
-      }
-    }
-  }
-
   export function getAllTags(notebook: DataflowNotebookModel): { [key: string]: string } {
     const allTags: { [key: string]: string } = {};
     const cellsArray = Array.from(notebook.cells);
@@ -351,8 +334,8 @@ import { truncateCellId } from '@dfnotebook/dfutils';
 
         codeDict[cId] = c.sharedModel.getSource();
         cellIdModelMap[cId] = c;
-        outputTags[cId] = dfmetadata.outputVars;
-        allRefs[cId] = dfmetadata.inputVars;      
+        outputTags[cId] = dfmetadata?.outputVars;
+        allRefs[cId] = dfmetadata?.inputVars;      
       }
     });
 

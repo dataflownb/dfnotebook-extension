@@ -97,7 +97,7 @@ import {
 } from '@dfnotebook/dfnotebook';
 import { IRenderMimeRegistry } from '@jupyterlab/rendermime';
 import { IChangedArgs, PageConfig } from '@jupyterlab/coreutils';
-import { DataflowCodeCell, DataflowInputArea, getNotebookId, notebookCellMap } from '@dfnotebook/dfcells';
+import { DataflowCodeCell, getNotebookId, notebookCellMap } from '@dfnotebook/dfcells';
 
 import { cellExecutor } from './cellexecutor';
 import { CellBarExtension } from '@jupyterlab/cell-toolbar';
@@ -392,7 +392,6 @@ const widgetFactoryPlugin: JupyterFrontEndPlugin<DataflowNotebookWidgetFactory.I
     autoStart: true
   };
 
-// FIXME Add back when dfgraph is updated
 // /**
 //  * Initialization for the Dfnb GraphManager for working with multiple graphs.
 //  */
@@ -728,17 +727,17 @@ class ToggleTagsWidget extends Widget {
       const cellsArray = Array.from(notebook.widgets);
       updateTooltip(isChecked);
 
-      cellsArray.forEach(cAny => {
-        const dfmetadata = cAny.model.getMetadata('dfmetadata');
-        if (cAny.model.type == 'code' && dfmetadata.tag){
-          const inputArea = (cAny as any).inputArea;
-          let currTag = dfmetadata.tag;
+      cellsArray.forEach(cell => {
+        const dfmetadata = cell.model.getMetadata('dfmetadata');
+        if (cell.model.type == 'code' && dfmetadata.tag){
+          const codeCell = cell as DataflowCodeCell;
+          const curTag = dfmetadata.tag;
           if (isChecked){
-            inputArea.addTag(currTag);
+            codeCell.addTag(curTag);
           } else{
-            inputArea.addTag("");
-            dfmetadata.tag = currTag;
-            cAny.model.setMetadata('dfmetadata', dfmetadata);
+            codeCell.addTag("");
+            dfmetadata.tag = curTag;
+            codeCell.model.setMetadata('dfmetadata', dfmetadata);
           }
         }
       });
@@ -2787,7 +2786,7 @@ function addCommands(
   commands.addCommand(CommandIDs.addCellTag, {
     label: 'Add Cell Tag',
     execute: async args => {
-      const cell = tracker.currentWidget?.content.activeCell as CodeCell;
+      const cell = tracker.currentWidget?.content.activeCell as DataflowCodeCell;
       if (cell == null) {
         return;
       }
@@ -2807,12 +2806,11 @@ function addCommands(
         }
       }
 
-      const inputArea = cell.inputArea as any;  
       const hexRegexp = new RegExp('^[0-9a-f]{8}$');
       const pythonVarRegexp = new RegExp('^[a-zA-Z0-9_]*$');
   
       // Function to create the dialog node
-      const createTagNode = (oldTag: string, errorMessage: string = ''): HTMLElement => {
+      const createTagNode = (oldTag: string | null, errorMessage: string = ''): HTMLElement => {
         const body = document.createElement('div');
   
         const input = document.createElement('input');
@@ -2834,7 +2832,7 @@ function addCommands(
       };
       
       const showAddTagDialog = async (errorMessage: string = ''): Promise<{ newTag: string } | null> => {
-        const dialogNode = createTagNode(inputArea.tag, errorMessage);
+        const dialogNode = createTagNode(cell.tag, errorMessage);
         const widgetNode = new Widget();
         widgetNode.node.appendChild(dialogNode);
   
@@ -2870,7 +2868,7 @@ function addCommands(
       const notebookId = getNotebookId(cell as DataflowCodeCell);
       if (result) {
         const { newTag } = result;
-        inputArea.addTag(newTag);
+        cell.addTag(newTag);
         if (newTag && tracker.currentWidget?.content.model) {
           let notebook = tracker.currentWidget.content.model as DataflowNotebookModel;
           await updateNotebookCellsWithTag(notebookId, notebook, cellUUID, tracker.currentWidget.sessionContext)
@@ -2880,9 +2878,8 @@ function addCommands(
     isEnabled: () => {
       const cell = tracker.currentWidget?.content.activeCell as CodeCell;
       const isTagsVisible = tracker.currentWidget?.model?.getMetadata('enable_tags');
-      if(cell && cell.model.type == 'code' && cell.inputArea){
-        const inputArea = cell.inputArea as DataflowInputArea;
-        return (inputArea.tag?.length ? false : true) && isTagsVisible;
+      if(cell && cell.model.type == 'code'){
+        return ((cell as DataflowCodeCell).tag?.length ? false : true) && isTagsVisible;
       }
       return false;
     },
@@ -2895,7 +2892,7 @@ function addCommands(
   commands.addCommand(CommandIDs.modifyCellTag, {
     label: 'Modify Cell Tag',
     execute: async args => {
-      const cell = tracker.currentWidget?.content.activeCell as CodeCell;
+      const cell = tracker.currentWidget?.content.activeCell as DataflowCodeCell;
       const existingCellTags = new Set();
 
       let cells = tracker.currentWidget?.content.model?.cells;
@@ -2915,10 +2912,8 @@ function addCommands(
       if (cell == null) {
         return;
       }
-  
-      const inputArea = cell.inputArea as any;
-  
-      if (!inputArea.tag) {
+    
+      if (!cell.tag) {
         alert('This cell does not have a tag.');
         return;
       }
@@ -2927,7 +2922,7 @@ function addCommands(
       const pythonVarRegexp = new RegExp('^[a-zA-Z0-9_]*$');
   
       // Function to create the dialog node
-      const createRenameTagNode = (oldTag: string, errorMessage: string = ''): HTMLElement => {
+      const createRenameTagNode = (oldTag: string | null, errorMessage: string = ''): HTMLElement => {
         const body = document.createElement('div');
   
         const inputLabel = document.createElement('label');
@@ -2965,7 +2960,7 @@ function addCommands(
       };
   
       const showModifyTagDialog = async (errorMessage: string = ''): Promise<{ newTag: string, updateReferences: boolean } | null> => {
-        const dialogNode = createRenameTagNode(inputArea.tag, errorMessage);
+        const dialogNode = createRenameTagNode(cell.tag, errorMessage);
         const widgetNode = new Widget();
         widgetNode.node.appendChild(dialogNode);
         
@@ -3009,7 +3004,7 @@ function addCommands(
       const notebookId = getNotebookId(cell as DataflowCodeCell);
       if (result) {
         const { newTag, updateReferences } = result;
-        inputArea.addTag(newTag);
+        cell.addTag(newTag);
 
         if (updateReferences && tracker.currentWidget?.content.model) {
           let notebook = tracker.currentWidget.content.model as DataflowNotebookModel;
@@ -3055,9 +3050,8 @@ function addCommands(
     isEnabled: () => {
       const cell = tracker.currentWidget?.content.activeCell as CodeCell;
       const isTagsVisible = tracker.currentWidget?.model?.getMetadata('enable_tags');
-      if (cell && cell.model.type == 'code' && cell.inputArea) {
-        const inputArea = cell.inputArea as DataflowInputArea;
-        return inputArea.tag?.length && isTagsVisible;
+      if (cell && cell.model.type == 'code') {
+        return (cell as DataflowCodeCell).tag?.length && isTagsVisible;
       }
       return false;
     },
@@ -3071,9 +3065,8 @@ function addCommands(
     label: trans.__('Tag'),
     caption: trans.__('Tag'),
     execute: args => {
-      const cell = tracker.currentWidget?.content.activeCell as CodeCell;
-      const inputArea = cell.inputArea as DataflowInputArea;
-      if(cell && inputArea && inputArea.tag){
+      const cell = tracker.currentWidget?.content.activeCell as DataflowCodeCell;
+      if(cell && cell.tag){
         commands.execute('notebook:modify-cell-tag');
       }
       else{
