@@ -91,10 +91,12 @@ function setOutputArea(cell: CodeCell) {
       translator: output._translator,
       promptOverlay: true,
       //@ts-expect-error
-      inputHistoryScope: output._inputHistoryScope
+      inputHistoryScope: output._inputHistoryScope,
     },
     truncateCellId(cell.model.id)
   );
+  //@ts-ignore
+  dfOutput.node.addEventListener('keydown', cell._detectCaretMovementInOuput);
 
   dfOutput.addClass(CELL_OUTPUT_AREA_CLASS);
 
@@ -105,10 +107,12 @@ function setOutputArea(cell: CodeCell) {
     cell.outputsScrolled = !cell.outputsScrolled;
   });
 
-  // output.initialize.disconnect();
-  // dfOutput.initialize.connect(() => {
-  //   this.updatePromptOverlayIcon();
-  // });
+  output.initialize.disconnect(() => {
+    cell.updatePromptOverlayIcon();    
+  });
+  dfOutput.initialize.connect(() => {
+    cell.updatePromptOverlayIcon();
+  });
 
   output.outputLengthChanged.disconnect(
     //@ts-expect-error
@@ -271,9 +275,13 @@ export namespace DataflowCodeCell {
     const model = cell.model;
     const code = model.sharedModel.getSource();
     if (!code.trim() || !sessionContext.session?.kernel) {
-      model.sharedModel.transact(() => {
-        model.clearExecution();
-      }, false);
+      model.sharedModel.transact(
+        () => {
+          model.clearExecution();
+        },
+        false,
+        'silent-change'
+      );
       return;
     }
     const cellId = { cellId: model.sharedModel.getId() };
@@ -283,11 +291,15 @@ export namespace DataflowCodeCell {
       ...cellId
     };
     const { recordTiming } = metadata;
-    model.sharedModel.transact(() => {
-      model.clearExecution();
-      cell.outputHidden = false;
-    }, false);
-    cell.setPrompt('*');
+    model.sharedModel.transact(
+      () => {
+        model.clearExecution();
+        cell.outputHidden = false;
+      },
+      false,
+      'silent-change'
+    );
+    model.executionState = 'running';
     model.trusted = true;
     let future:
       | Kernel.IFuture<
@@ -419,7 +431,7 @@ export namespace DataflowCodeCell {
       // execution, clear the prompt.
       if (future && !cell.isDisposed && cell.outputArea.future === future) {
         // FIXME is this necessary?
-        cell.setPromptToId();
+        cell.model.executionState = 'idle';
       }
       throw e;
     }
