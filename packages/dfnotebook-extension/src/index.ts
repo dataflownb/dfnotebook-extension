@@ -32,7 +32,7 @@ import { IEditorServices } from '@jupyterlab/codeeditor';
 import { IEditorExtensionRegistry } from '@jupyterlab/codemirror';
 import { ToolbarItems as DocToolbarItems } from '@jupyterlab/docmanager-extension';
 import { DocumentRegistry, IDocumentWidget } from '@jupyterlab/docregistry';
-import { IDefaultFileBrowser } from '@jupyterlab/filebrowser';
+import { IDefaultFileBrowser, IFileBrowserFactory } from '@jupyterlab/filebrowser';
 import { ILauncher } from '@jupyterlab/launcher';
 import { IMainMenu } from '@jupyterlab/mainmenu';
 import { truncateCellId } from '@dfnotebook/dfutils';
@@ -70,7 +70,8 @@ import {
   pasteIcon,
   refreshIcon,
   runIcon,
-  stopIcon
+  stopIcon,
+  tableRowsIcon
 } from '@jupyterlab/ui-components';
 import { ArrayExt } from '@lumino/algorithm';
 import { CommandRegistry } from '@lumino/commands';
@@ -294,6 +295,12 @@ namespace CommandIDs {
   export const selectCompleter = 'completer:select-notebook';
 
   export const tocRunCells = 'toc:run-cells';
+
+  export const accessPreviousHistory = 'notebook:access-previous-history-entry';
+
+  export const accessNextHistory = 'notebook:access-next-history-entry';
+
+  export const virtualScrollbar = 'notebook:toggle-virtual-scrollbar';
 
   export const addCellTag = 'notebook:add-cell-tag';
 
@@ -950,7 +957,8 @@ function activateNotebookHandler(
   settingRegistry: ISettingRegistry | null,
   sessionDialogs_: ISessionContextDialogs | null,
   translator_: ITranslator | null,
-  formRegistry: IFormRendererRegistry | null
+  formRegistry: IFormRendererRegistry | null,
+  filebrowserFactory: IFileBrowserFactory | null
 ): INotebookTracker {
   setCellExecutor(executor);
 
@@ -1087,8 +1095,15 @@ function activateNotebookHandler(
             .catch(console.error);
         }
       });
-    })
-    .catch((reason: Error) => {
+      addCommands(
+        app,
+        tracker,
+        translator,
+        sessionDialogs,
+        settings,
+        isEnabled
+      );
+    }).catch((reason: Error) => {
       console.warn(reason.message);
       updateTracker({
         editorConfig: factory.editorConfig,
@@ -1096,6 +1111,7 @@ function activateNotebookHandler(
         kernelShutdown: factory.shutdownOnClose,
         autoStartDefault: factory.autoStartDefault
       });
+      addCommands(app, tracker, translator, sessionDialogs, null, isEnabled);
     });
 
   if (formRegistry) {
@@ -1156,8 +1172,6 @@ function activateNotebookHandler(
   registry.addModelFactory(dfModelFactory);
   // !!! END DATAFLOW NOTEBOOK CHANGE !!!
 
-  addCommands(app, tracker, translator, sessionDialogs, isEnabled);
-
   if (palette) {
     populatePalette(palette, translator);
   }
@@ -1197,6 +1211,14 @@ function activateNotebookHandler(
     tracker.forEach(widget => {
       widget.setConfig(options);
     });
+    if (options.notebookConfig.windowingMode !== 'full') {
+      // Disable all virtual scrollbars if any was enabled
+      tracker.forEach(widget => {
+        if (widget.content.scrollbar) {
+          widget.content.scrollbar = false;
+        }
+      });
+    }
   }
 
   /**
@@ -1336,7 +1358,9 @@ function activateNotebookHandler(
     caption: trans.__('Create a new notebook'),
     icon: args => (args['isPalette'] ? undefined : notebookIcon),
     execute: args => {
-      const cwd = (args['cwd'] as string) || (defaultBrowser?.model.path ?? '');
+      const currentBrowser =
+        filebrowserFactory?.tracker.currentWidget ?? defaultBrowser;
+      const cwd = (args['cwd'] as string) || (currentBrowser?.model.path ?? '');
       const kernelId = (args['kernelId'] as string) || '';
       const kernelName = (args['kernelName'] as string) || '';
       return createNew(cwd, kernelId, kernelName);
@@ -1411,6 +1435,7 @@ function addCommands(
   tracker: NotebookTracker,
   translator: ITranslator,
   sessionDialogs: ISessionContextDialogs,
+  settings: ISettingRegistry.ISettings | null,
   isEnabled: () => boolean
 ): void {
   const trans = translator.load('jupyterlab');
@@ -2709,6 +2734,55 @@ function addCommands(
       );
     }
   });
+  commands.addCommand(CommandIDs.accessPreviousHistory, {
+    label: trans.__('Access Previous Kernel History Entry'),
+    execute: async args => {
+      const current = getCurrent(tracker, shell, args);
+      if (current) {
+        return await NotebookActions.accessPreviousHistory(current.content);
+      }
+    }
+  });
+  commands.addCommand(CommandIDs.accessNextHistory, {
+    label: trans.__('Access Next Kernel History Entry'),
+    execute: async args => {
+      const current = getCurrent(tracker, shell, args);
+      if (current) {
+        return await NotebookActions.accessNextHistory(current.content);
+      }
+    }
+  });
+
+  commands.addCommand(CommandIDs.virtualScrollbar, {
+    label: trans.__('Show Minimap'),
+    caption: trans.__(
+      'Show Minimap (virtual scrollbar, enabled with windowing mode: full)'
+    ),
+    execute: args => {
+      const current = getCurrent(tracker, shell, args);
+
+      if (current) {
+        current.content.scrollbar = !current.content.scrollbar;
+      }
+    },
+    icon: args => (args.toolbar ? tableRowsIcon : undefined),
+    isEnabled: args => {
+      const enabled =
+        (args.toolbar ? true : isEnabled()) &&
+        (settings?.composite.windowingMode === 'full' ?? false);
+      return enabled;
+    },
+    isToggled: () => {
+      const current = tracker.currentWidget;
+      return current?.content.scrollbar ?? false;
+    },
+    isVisible: args => {
+      const visible =
+        (args.toolbar ? true : isEnabled()) &&
+        (settings?.composite.windowingMode === 'full' ?? false);
+      return visible;
+    }
+  });
 
   commands.addCommand(CommandIDs.addCellTag, {
     label: 'Add Cell Tag',
@@ -3020,6 +3094,18 @@ function addCommands(
   });
 
   // !!! END DATAFLOW NOTEBOOK CHANGE !!!
+
+  // All commands with isEnabled defined directly or in a semantic commands
+  // To simplify here we added all commands as most of them have isEnabled
+  const skip = [CommandIDs.createNew, CommandIDs.createOutputView];
+  const notify = () => {
+    Object.values(CommandIDs)
+      .filter(id => !skip.includes(id) && app.commands.hasCommand(id))
+      .forEach(id => app.commands.notifyCommandChanged(id));
+  };
+  tracker.currentChanged.connect(notify);
+  shell.currentChanged?.connect(notify);
+
 }
 
 /**
