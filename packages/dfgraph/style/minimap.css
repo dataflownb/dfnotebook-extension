@@ -205,3 +205,17 @@ input:checked + .slider:before {
 .slider.round:before {
   border-radius: 50%;
 }
+
+#minipreview {
+    position: absolute;
+    width:500px;
+    background-color: #fff;
+    opacity:.8;
+    color: white;
+    padding: 5px;
+    border-radius: 3px;
+    border-style: solid;
+    border-color: #000;
+    z-index: 1;
+    display: none; /* Initially hidden */
+}

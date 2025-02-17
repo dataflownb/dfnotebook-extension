@@ -31,6 +31,7 @@ export class Minimap {
   edges: any;
   parentdiv: any;
   svg: any;
+  miniPreview: any;
   dfgraph: any;
   wasCreated: boolean;
   outputTags: { [name: string]: [] };
@@ -405,7 +406,44 @@ export class Minimap {
         let parent = d3.select(this.parentNode);
         let node = parent.select('circle');
         that.elementActivate(parent, node);
-      });
+      })
+      .on('mouseover',function (a:string, b:number) {
+        let parent = d3.select(this.parentNode);
+        let activeId = parent.attr('id');
+        activeId = activeId.substring(that.idSubstr.length, activeId.length);
+        let uuid = activeId.substring(
+          activeId.length - uuidLength,
+          activeId.length
+        );
+        let out = activeId.split('DFELEMENT')[0];
+        let outidx = that.dfgraph.getNodes(uuid).indexOf(out);
+        let cellidx = that.order.indexOf(uuid);
+        let orderidx = that.orderFixed.indexOf(activeId);
+        //This happens to items that aren't tagged because the output is something else
+        if(outidx == -1) {outidx = 0;}
+        let matplotlib = '<div class="lm-Widget jp-RenderedText jp-mod-trusted jp-OutputArea-output" data-mime-type="text/plain"><pre>&lt;Axes: &gt;</pre></div>';
+        let cell = that.tracker.currentWidget.content.cellsArray[cellidx];
+        let cellContent = '';
+        let currItem = 0;
+        for(let i = 0; i < cell.outputArea.node.childNodes.length; i++){
+          let currContent = cell.outputArea.node.childNodes[i].children[1].outerHTML;
+          if(currContent == matplotlib) {continue;}
+          if(currItem == outidx) {
+            cellContent = cell.outputArea.node.childNodes[i].children[1].outerHTML;
+            break;
+          }
+          currItem++;
+        }
+        that.miniPreview.html(cellContent);
+        const tooltip = document.getElementById('minipreview');
+        if(tooltip){
+          tooltip.style.left = '100px';
+          tooltip.style.top = 10+(orderidx*15)+'px';
+          tooltip.style.display = 'block'; // Show tooltip
+        }
+
+      })
+      .on('mouseout',function(){ that.miniPreview.style('display','none');});
 
     groups
       .append('circle')
@@ -761,6 +799,7 @@ export class Minimap {
         .select('#minimap')
         .append('div')
         .attr('id', 'side-panel-mini');
+      this.miniPreview = d3.select('#minidiv').append('div').attr('id','minipreview');
       this.tabular = this.toggle
         .append('div')
         .attr('id', 'table')
