@@ -151,6 +151,10 @@
       "value-no-vendor-prefix": null
     }
   },
+  "resolutions": {
+    "@codemirror/view": "~6.26.3",
+    "@codemirror/state": "~6.4.1"
+  },
   "dependencies": {
     "@jupyterlab/application": "^4.3.5"
   },
