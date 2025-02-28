@@ -160,6 +160,9 @@ export abstract class DataflowAttachmentsCell<
 }
 
 export class DataflowCodeCell extends CodeCell {
+  public executedCode: string;
+  public isTagsEnabled: boolean;
+
   protected initializeDOM(): void {
     super.initializeDOM();
     setOutputArea(this);
@@ -172,18 +175,15 @@ export class DataflowCodeCell extends CodeCell {
      * reimplement its logic here...
      * but thankfully _setPrompt can be overridden
      */
-
-    let prompt: string;
     if (this.model.executionState == 'running') {
-      prompt = '*';
-    } else {
-      if (this.tag)
-        prompt = `${this.tag}`;
-      else
-        prompt = `${truncateCellId(this.model.id) || ''}`;
+      this.prompt = '*';
+    } else if(this.isTagsEnabled && this.tag){
+      this.prompt = `${this.tag}`;
+    } else{
+      this.prompt = `${truncateCellId(this.model.id) || ''}`;
     }
-    this.prompt = prompt;
-    this.inputArea?.setPrompt(prompt);
+    
+    this.inputArea?.setPrompt(this.prompt);
   }
 
   public addTag(value: string | null) {
@@ -202,38 +202,39 @@ export class DataflowCodeCell extends CodeCell {
     super.initializeState();
     setDFMetadata(this);
     this.model.contentChanged.connect(this._onContentChanged, this);
+    this.executedCode=this.model.sharedModel.getSource().trim();
     return this;
   }
 
   private _onContentChanged(): void {
-    let notebookpanelId = getNotebookId(this)
-
-    if(notebookpanelId){
-      const currentCode = this.model.sharedModel.getSource().trim();
-      const cId = truncateCellId(this.model.sharedModel.getId());
-      const executedCode = notebookCellMap.get(notebookpanelId)?.get(cId)?.trim();
-      if (executedCode != ''){
-        if(executedCode === currentCode){
-          this.node.classList.add('df-cell-not-dirty');
-        }
-        else{
-          this.node.classList.remove('df-cell-not-dirty');
-        }
+    const currentCode = this.model.sharedModel.getSource().trim();
+    if (this.executedCode != ''){
+      if(this.executedCode === currentCode){
+        this.node.classList.add('df-cell-not-dirty');
+      }
+      else{
+        this.node.classList.remove('df-cell-not-dirty');
       }
     }
   }
+
+  public enableTags(value: boolean) {
+    this.isTagsEnabled = value;
+    this._setPrompt(''); // argument is not important
+  }
 }
 
-export function getNotebookId(cell: DataflowCodeCell): string|undefined {
+export function getNotebookPanel(cell: DataflowCodeCell): NotebookPanel|undefined {
   let parent = cell.parent;
     while (parent) {
       if (parent instanceof NotebookPanel) {
-        return parent.id;
+        return parent;
       }
       parent = parent.parent;
     }
   return undefined;
 }
+
 
 export namespace DataflowCodeCell {
   /**

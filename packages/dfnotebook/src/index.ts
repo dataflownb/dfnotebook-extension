@@ -12,3 +12,5 @@ export * from './panel';
 export * from './widget';
 export * from './tokens';
 export * from './widgetfactory';
+export * from './commhandler';
+export * from './executionreplyhandler';

@@ -1,4 +1,4 @@
-import { Dialog, ISessionContext, showDialog } from '@jupyterlab/apputils';
+import { Dialog, showDialog } from '@jupyterlab/apputils';
 import {
     CodeCell,
   type Cell,
@@ -11,8 +11,10 @@ import { findIndex } from '@lumino/algorithm';
 import { KernelError, INotebookModel, INotebookCellExecutor } from '@jupyterlab/notebook';
 import { DataflowCodeCell } from '@dfnotebook/dfcells';
 import { DataflowNotebookModel } from './model';
-import { notebookCellMap, getNotebookId } from '@dfnotebook/dfcells';
+import { getNotebookPanel } from '@dfnotebook/dfcells';
 import { truncateCellId } from '@dfnotebook/dfutils';
+import { dfCommPostData, getCellsMetadata } from './commhandler';
+import { updatedfNotebook } from './executionreplyhandler';
 
 /**
  * Run a single notebook cell.
@@ -32,7 +34,6 @@ import { truncateCellId } from '@dfnotebook/dfutils';
   }: INotebookCellExecutor.IRunCellOptions): Promise<boolean> {
     translator = translator ?? nullTranslator;
     const trans = translator.load('jupyterlab');
-    const notebookId = getNotebookId(cell as DataflowCodeCell);
     switch (cell.model.type) {
       case 'markdown':
         (cell as MarkdownCell).rendered = true;
@@ -102,13 +103,15 @@ import { truncateCellId } from '@dfnotebook/dfutils';
                   dfData.dfMetadata,
                   dfData.cellIdModelMap
               );
-                            
-              if (reply) {
-                await updateDataflowMetadata(notebook, reply, notebookId);
-              }
+              
+              let notebookPanel = getNotebookPanel(cell as DataflowCodeCell);
 
+              if (reply) {
+                await updatedfNotebook(notebookPanel, reply);
+              }
+              
               if (sessionContext?.session?.kernel) {
-                await dfCommPostData(notebookId, notebook as DataflowNotebookModel, sessionContext)
+                await dfCommPostData(notebookPanel, sessionContext)
               }
             } 
             else {
@@ -174,185 +177,7 @@ import { truncateCellId } from '@dfnotebook/dfutils';
 
     return Promise.resolve(true);
   }
-
-  async function dfCommPostData(notebookId: string|undefined, notebook: DataflowNotebookModel, sessionContext: ISessionContext): Promise<void> {
-    const dfData = getCellsMetadata(notebook, '');
-    if (!notebook.getMetadata('enable_tags')) {
-      dfData.dfMetadata.input_tags = {};
-    }
-    try {
-      const response = await dfCommGetData(sessionContext, {'dfMetadata': dfData.dfMetadata});
-      if (response?.code_dict && Object.keys(response.code_dict).length > 0) {
-        await updateNotebookCells(notebook, notebookId, response.code_dict);
-      }
-    } catch (error) {
-      console.error('Error during kernel communication:', error);
-    }
-  }
-
-  export async function dfCommGetData(sessionContext: ISessionContext, commData: any): Promise<any> {
-    return new Promise<void>((resolve) => {
-      const comm = sessionContext.session?.kernel?.createComm('dfcode');
-      if (!comm) {
-        resolve();
-        return;
-      }
-      comm.open();
-      comm.send(commData);
-      comm.onMsg = (msg: any) => {
-        const content = msg.content.data;
-        resolve(content);
-      };
-    });
-  }
-
-  async function updateNotebookCells(notebook: DataflowNotebookModel, notebookId:string|undefined, codeDict: { [key: string]: any }) {
-    const cellMap = notebookId ? notebookCellMap.get(notebookId) : undefined;
-    const cellsArray = Array.from(notebook.cells);
-    cellsArray.forEach(cell => {
-      if (cell.type === 'code') {
-        const cId = truncateCellId(cell.id);
-        if (codeDict.hasOwnProperty(cId)) {
-          const updatedCode = codeDict[cId];
-          const dfmetadata = cell.getMetadata('dfmetadata');
-
-          if (cellMap) {
-            if (cellMap?.get(cId) !== cell.sharedModel.getSource()) {
-              cell.sharedModel.setSource(updatedCode);
-              cellMap.set(cId, updatedCode.trim());
-            } else {
-              cellMap.set(cId, updatedCode.trim());
-              cell.sharedModel.setSource(updatedCode);
-            }
-          }
-          cell.setMetadata('dfmetadata', dfmetadata);
-        }
-      }
-    });
-  }
-
-  async function updateDataflowMetadata(notebook: DataflowNotebookModel, reply: KernelMessage.IExecuteReplyMsg, notebookId: string|undefined): Promise<void> {
-    const content = reply?.content as any;
-
-    if (!content) return;
-
-    const cellMap = notebookId ? notebookCellMap.get(notebookId) : undefined;
-    const allTags = getAllTags(notebook);
-    const cellsArray = Array.from(notebook.cells);
-
-    cellsArray.forEach((cell, index) => {
-      if (cell.type === 'code') {
-        updateCellMetadata(cell as ICodeCellModel, content, allTags, cellMap);
-      }
-    });
-  }
-
-  function updateCellMetadata(cellModel: ICodeCellModel, content: any, allTags: { [key: string]: string }, cellMap: Map<string, string> | undefined): void {
-    const cId = truncateCellId(cellModel.id);
-    const dfmetadata = cellModel.getMetadata('dfmetadata') || {};
-
-    if (content.persistent_code?.[cId]) {
-      dfmetadata.persistentCode = content.persistent_code[cId];
-    }
-
-    if (content.identifier_refs?.[cId]) {
-      const refs = content.identifier_refs[cId];
-      dfmetadata.inputVars = {
-        ref: refs,
-        tag_refs: mapTagsToRefs(refs, allTags)
-      };
-
-      let cellOutputTags: string[] = [];
-      for (let i = 0; i < cellModel.outputs.length; ++i) {
-        const out = cellModel.outputs.get(i);
-        if(out.metadata['output_tag']){
-          cellOutputTags.push(out.metadata['output_tag'] as string);
-        }
-      }
-      dfmetadata.outputVars = cellOutputTags;
-
-      if (cellMap) {
-        cellMap.set(cId, cellModel.sharedModel.getSource());
-      }
-    }
-    cellModel.setMetadata('dfmetadata', dfmetadata);
-  }
-
-  function mapTagsToRefs(refs: { [key: string]: any }, allTags: { [key: string]: string }): { [key: string]: string } {
-    const tagRefs: { [key: string]: string } = {};
-
-    Object.keys(refs).forEach(key => {
-      if (allTags[key]) {
-        tagRefs[key] = allTags[key];
-      }
-    });
-
-    return tagRefs;
-  }
-
-  export function getAllTags(notebook: DataflowNotebookModel): { [key: string]: string } {
-    const allTags: { [key: string]: string } = {};
-    const cellsArray = Array.from(notebook.cells);
-
-    cellsArray.forEach(cell => {
-      if (cell.type === 'code') {
-        const dfmetadata = cell.getMetadata('dfmetadata');
-        const tag = dfmetadata?.tag;
-        if (tag) {
-          const cId = truncateCellId(cell.id);
-          allTags[cId] = tag;
-        }
-      }
-    });
-
-    return allTags;
-  }
-
-  export function getCellsMetadata(notebook: DataflowNotebookModel, cellUUID: string) {
-    const codeDict: { [key: string]: string } = {};
-    const cellIdModelMap: { [key: string]: any } = {};
-    const outputTags: { [key: string]: string[] } = {};
-    const inputTags: { [key: string]: string } = {};
-    const allRefs: { [key: string]: { [key: string]: string[] } } = {};
-    const cellsArray = Array.from(notebook.cells);
-
-    cellsArray.forEach(cell => {
-      if (cell.type === 'code') {
-        const c = cell as ICodeCellModel;
-        const cId = truncateCellId(c.id);
-        const dfmetadata = c.getMetadata('dfmetadata');
-        if(!dfmetadata.persistentCode)
-        {
-          cellIdModelMap[cId] = c;
-          return;
-        }
-        const inputTag = dfmetadata?.tag;
-
-        if (inputTag) {
-          inputTags[inputTag] = cId;
-        }
-
-        codeDict[cId] = c.sharedModel.getSource();
-        cellIdModelMap[cId] = c;
-        outputTags[cId] = dfmetadata?.outputVars;
-        allRefs[cId] = dfmetadata?.inputVars;      
-      }
-    });
-
-    const dfMetadata = {
-      // FIXME replace with utility function (see dfcells/widget)
-      uuid: cellUUID,
-      code_dict: codeDict,
-      output_tags: outputTags,
-      input_tags: inputTags,
-      auto_update_flags: {},
-      force_cached_flags: {},
-      all_refs: allRefs,
-      executed_code: {}
-    };
-    return { dfMetadata, cellIdModelMap };
-  }
-
+  
   /**
    * Handle payloads from an execute reply.
    *
