@@ -1,13 +1,11 @@
 import { ISessionContext } from '@jupyterlab/apputils';
-import { NotebookPanel } from '@jupyterlab/notebook';
-import { DataflowCodeCell } from '@dfnotebook/dfcells';
+import { DataflowCodeCellModel } from '@dfnotebook/dfcells';
 import { DataflowNotebookModel } from './model';
 import { truncateCellId } from '@dfnotebook/dfutils';
-import { ICodeCellModel } from '@jupyterlab/cells';
 
-export async function dfCommPostData(notebook: NotebookPanel|undefined, sessionContext: ISessionContext): Promise<void> {
-    const dfData = getCellsMetadata(notebook?.model as DataflowNotebookModel, '');
-    if (!notebook?.model?.getMetadata('enable_tags')) {
+export async function dfCommPostData(notebook: DataflowNotebookModel, sessionContext: ISessionContext): Promise<void> {
+    const dfData = getCellsMetadata(notebook, '');
+    if (!notebook.getMetadata('enable_tags')) {
       dfData.dfMetadata.input_tags = {};
     }
     try {
@@ -36,22 +34,25 @@ export async function dfCommGetData(sessionContext: ISessionContext, commData: a
   });
 }
 
-async function updateNotebookCells(notebook: NotebookPanel|undefined, codeDict: { [key: string]: any }) {
-  notebook?.content.widgets.forEach(cell => {
-    if (cell instanceof DataflowCodeCell) {
-      const cId = truncateCellId(cell.model.id);
+async function updateNotebookCells(notebook: DataflowNotebookModel, codeDict: { [key: string]: any }) {
+  const cellsArray = Array.from(notebook.cells);
+  cellsArray.forEach(c => {
+    if (c.type === 'code'){
+      const cell = c as DataflowCodeCellModel;
+      const cId = truncateCellId(cell.id);
       if (codeDict.hasOwnProperty(cId)) {
         const updatedCode = codeDict[cId];
-        const dfmetadata = cell.model.getMetadata('dfmetadata');
-          
-        if (cell.executedCode !== cell.model.sharedModel.getSource()) {
-          cell.model.sharedModel.setSource(updatedCode);
-          cell.executedCode = updatedCode.trim();
+        const dfmetadata = cell.getMetadata('dfmetadata');
+        const lastExecutedCode = (cell as DataflowCodeCellModel).lastExecutedCode
+        if (lastExecutedCode !== cell.sharedModel.getSource()) {
+          cell.sharedModel.setSource(updatedCode);
+          (cell as DataflowCodeCellModel).lastExecutedCode = updatedCode.trim();
         } else {
-          cell.executedCode = updatedCode.trim();
-          cell.model.sharedModel.setSource(updatedCode);
+          (cell as DataflowCodeCellModel).lastExecutedCode = updatedCode.trim();
+          cell.sharedModel.setSource(updatedCode);
+
         }
-        cell.model.setMetadata('dfmetadata', dfmetadata);
+        cell.setMetadata('dfmetadata', dfmetadata);
       }
     }
   });
@@ -67,7 +68,7 @@ export function getCellsMetadata(notebook: DataflowNotebookModel, cellUUID: stri
 
     cellsArray.forEach(cell => {
       if (cell.type === 'code') {
-        const c = cell as ICodeCellModel;
+        const c = cell as DataflowCodeCellModel;
         const cId = truncateCellId(c.id);
         const dfmetadata = c.getMetadata('dfmetadata');
         if(!dfmetadata.persistentCode)

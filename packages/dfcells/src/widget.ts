@@ -20,7 +20,6 @@ import { cellIdIntToStr, truncateCellId } from '@dfnotebook/dfutils';
 import { ISessionContext } from '@jupyterlab/apputils';
 import { JSONObject } from '@lumino/coreutils';
 import { Panel } from '@lumino/widgets';
-import { NotebookPanel } from '@jupyterlab/notebook';
 
 import { Manager as GraphManager } from '@dfnotebook/dfgraph';
 
@@ -31,7 +30,7 @@ const CELL_OUTPUT_AREA_CLASS = 'jp-Cell-outputArea';
 
 export const notebookCellMap = new Map<string, Map<string, string>>();
 
-function setOutputArea(cell: CodeCell) {
+function setOutputArea(cell: DataflowCodeCell) {
   //@ts-expect-error
   const outputWrapper = cell._outputWrapper as Panel;
   const output = cell.outputArea;
@@ -159,10 +158,12 @@ export abstract class DataflowAttachmentsCell<
   }
 }
 
-export class DataflowCodeCell extends CodeCell {
-  public executedCode: string;
-  public isTagsEnabled: boolean;
+export interface DataflowCodeCellModel extends ICodeCellModel {
+  lastExecutedCode: string;
+  isTagsEnabled: boolean;
+}
 
+export class DataflowCodeCell extends CodeCell {
   protected initializeDOM(): void {
     super.initializeDOM();
     setOutputArea(this);
@@ -175,9 +176,10 @@ export class DataflowCodeCell extends CodeCell {
      * reimplement its logic here...
      * but thankfully _setPrompt can be overridden
      */
+    const isTagsEnabled = (this.model as DataflowCodeCellModel).isTagsEnabled;
     if (this.model.executionState == 'running') {
       this.prompt = '*';
-    } else if(this.isTagsEnabled && this.tag){
+    } else if(isTagsEnabled && this.tag){
       this.prompt = `${this.tag}`;
     } else{
       this.prompt = `${truncateCellId(this.model.id) || ''}`;
@@ -202,14 +204,15 @@ export class DataflowCodeCell extends CodeCell {
     super.initializeState();
     setDFMetadata(this);
     this.model.contentChanged.connect(this._onContentChanged, this);
-    this.executedCode=this.model.sharedModel.getSource().trim();
+    (this.model as DataflowCodeCellModel).lastExecutedCode = this.model.sharedModel.getSource().trim();
     return this;
   }
 
   private _onContentChanged(): void {
     const currentCode = this.model.sharedModel.getSource().trim();
-    if (this.executedCode != ''){
-      if(this.executedCode === currentCode){
+    const lastExecutedCode = (this.model as DataflowCodeCellModel).lastExecutedCode;
+    if (lastExecutedCode != ''){
+      if(lastExecutedCode === currentCode){
         this.node.classList.add('df-cell-not-dirty');
       }
       else{
@@ -219,22 +222,10 @@ export class DataflowCodeCell extends CodeCell {
   }
 
   public enableTags(value: boolean) {
-    this.isTagsEnabled = value;
+    (this.model as DataflowCodeCellModel).isTagsEnabled = value;
     this._setPrompt(''); // argument is not important
   }
 }
-
-export function getNotebookPanel(cell: DataflowCodeCell): NotebookPanel|undefined {
-  let parent = cell.parent;
-    while (parent) {
-      if (parent instanceof NotebookPanel) {
-        return parent;
-      }
-      parent = parent.parent;
-    }
-  return undefined;
-}
-
 
 export namespace DataflowCodeCell {
   /**

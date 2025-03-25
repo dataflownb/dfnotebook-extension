@@ -97,7 +97,7 @@ import { IChangedArgs, PageConfig } from '@jupyterlab/coreutils';
 import { DataflowCodeCell } from '@dfnotebook/dfcells';
 
 import { cellExecutor } from './cellexecutor';
-import { handleAddCellTag, handleModifyCellTag, updateCellsByName } from './cellname';
+import { handleAddCellTag, handleModifyCellTag, updateCellsByTag } from './cellname';
 import { CellBarExtension } from '@jupyterlab/cell-toolbar';
 import { Widget } from '@lumino/widgets';
 import tagSvgstr from '../style/tag.svg';
@@ -730,7 +730,7 @@ class ToggleTagsWidget extends Widget {
 
       nbPanel.model?.setMetadata("enable_tags", isChecked);
       app.commands.notifyCommandChanged('toolbar-button:tag-cell')
-      await updateCellsByName(nbPanel, "", nbPanel.sessionContext, !isChecked);
+      await updateCellsByTag(nbPanel, "", nbPanel.sessionContext, !isChecked);
     });
 
     this.node.appendChild(containerDiv);
@@ -2823,78 +2823,6 @@ function addCommands(
   shell.currentChanged?.connect(notify);
 
 }
-
-/**
- * Update code based on add, delete or modified tag value
- */
-// export async function updateNotebookCellsWithTag(notebook: NotebookPanel, cellUUID: string, sessionContext: ISessionContext, hideTags: boolean=false, updateInputTagsOnly: boolean=false) {
-//   let dfData = getCellsMetadata(notebook.model as DataflowNotebookModel, '');
-  
-//   const executedCode: { [key: string]: string } = {};
-//   notebook.content.widgets.forEach((cell, index) => {
-//     if (cell instanceof DataflowCodeCell) {
-//       const cId = truncateCellId(cell.model.id);
-//       executedCode[cId] = cell.executedCode;
-//     }
-//   });
-//   dfData.dfMetadata.executed_code = executedCode;
-
-//   if (hideTags) {
-//     dfData.dfMetadata.input_tags = {};
-//   }
-
-//   if (updateInputTagsOnly){
-//     dfData.dfMetadata.all_refs = {}
-//     dfData.dfMetadata.output_tags = {}
-//     dfData.dfMetadata.code_dict = {}
-//   }
-
-//   try {
-//     const response = await dfCommGetData(sessionContext, {'dfMetadata': dfData.dfMetadata, 'updateExecutedCode': true});
-//     updateNotebookCells(notebook, response, cellUUID, hideTags);
-//   } catch (error) {
-//     console.error('Error occured during kernel communication', error);
-//   }
-// }
-
-// function updateNotebookCells(notebook: NotebookPanel, content: any, cellUUID: string, hideTags: boolean): void {
-//   const all_Tags = getAllTags(notebook.model as DataflowNotebookModel);
-  
-//   notebook.content.widgets.forEach((cell, index) => {
-//     if (cell instanceof DataflowCodeCell) {
-//       const cId = truncateCellId(cell.model.id);
-
-//       // Handle executed code updates
-//       if (content.executed_code_dict?.hasOwnProperty(cId)) {
-//         const updatedCode = content.executed_code_dict[cId];
-//         cell.executedCode = updatedCode.trim();
-//       }
-
-//       // Handle code dictionary updates
-//       if (content.code_dict?.hasOwnProperty(cId)) {
-//         const updatedCode = content.code_dict[cId];
-//         cell.model.sharedModel.setSource(updatedCode);
-//       }
-
-//       //Updating the dependent cell's df-metadata when any cell is tagged/untagged
-//       if (cellUUID && !hideTags) {
-//         const dfmetadata = cell.model.getMetadata('dfmetadata');
-//         const inputVarsMetadata = dfmetadata.inputVars;
-//         if (inputVarsMetadata && typeof inputVarsMetadata === 'object' && 'ref' in inputVarsMetadata) {
-//           const refValue = inputVarsMetadata.ref as { [key: string]: any };
-//           let tagRefValue = inputVarsMetadata.tag_refs as { [key: string]: any };
-//           for (const ref_key in refValue) {
-//             if (ref_key == cellUUID && all_Tags.hasOwnProperty(ref_key)) {
-//               tagRefValue[cellUUID] = all_Tags[cellUUID];
-//             }
-//           }
-//           dfmetadata.inputVars = { 'ref': refValue, 'tag_refs': tagRefValue };
-//           cell.model.setMetadata('dfmetadata', dfmetadata);
-//         }
-//       }
-//     }
-//   });
-// }
 
 /**
  * Populate the application's command palette with notebook commands.

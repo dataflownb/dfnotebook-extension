@@ -11,7 +11,6 @@ import { findIndex } from '@lumino/algorithm';
 import { KernelError, INotebookModel, INotebookCellExecutor } from '@jupyterlab/notebook';
 import { DataflowCodeCell } from '@dfnotebook/dfcells';
 import { DataflowNotebookModel } from './model';
-import { getNotebookPanel } from '@dfnotebook/dfcells';
 import { truncateCellId } from '@dfnotebook/dfutils';
 import { dfCommPostData, getCellsMetadata } from './commhandler';
 import { updatedfNotebook } from './executionreplyhandler';
@@ -104,14 +103,9 @@ import { updatedfNotebook } from './executionreplyhandler';
                   dfData.cellIdModelMap
               );
               
-              let notebookPanel = getNotebookPanel(cell as DataflowCodeCell);
-
-              if (reply) {
-                await updatedfNotebook(notebookPanel, reply);
-              }
-              
               if (sessionContext?.session?.kernel) {
-                await dfCommPostData(notebookPanel, sessionContext)
+                await updatedfNotebook(notebook, reply, cell);
+                await dfCommPostData(notebook, sessionContext)
               }
             } 
             else {

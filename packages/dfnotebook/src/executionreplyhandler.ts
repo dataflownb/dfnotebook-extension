@@ -1,28 +1,35 @@
 import type { KernelMessage } from '@jupyterlab/services';
-import { NotebookPanel } from '@jupyterlab/notebook';
-import { DataflowCodeCell } from '@dfnotebook/dfcells';
+import { DataflowCodeCellModel } from '@dfnotebook/dfcells';
 import { DataflowNotebookModel } from './model';
 import { truncateCellId } from '@dfnotebook/dfutils';
+import { Cell } from '@jupyterlab/cells';
 
-export async function updatedfNotebook(notebook: NotebookPanel|undefined, reply: KernelMessage.IExecuteReplyMsg): Promise<void> {
-  const content = reply?.content as any;
-  
+export async function updatedfNotebook(notebook: DataflowNotebookModel, reply: KernelMessage.IExecuteReplyMsg | void, executedCell: Cell): Promise<void> {
+  let content = reply?.content as any;
+
+  if(!reply && !executedCell.model.sharedModel.getSource().trim()){
+    const cellId = truncateCellId(executedCell.model.sharedModel.getId())
+    content = {
+      persistent_code: { [cellId]: '' }, 
+      identifier_refs: { [cellId]: {} }
+    };
+  }
+
   if (!content || !notebook) return;
   
-  const allTags = getAllTags(notebook.model as DataflowNotebookModel);
-  const cells = notebook.content.widgets;
-  cells.filter(widget => widget instanceof DataflowCodeCell);
-  notebook.content.widgets.forEach(cell => {
-    if (cell instanceof DataflowCodeCell) {
-      updateCellMetadata(cell, content, allTags)
+  const allTags = getAllTags(notebook);
+  const cellsArray = Array.from(notebook.cells);
+  cellsArray.forEach(cell => {
+    if (cell.type === 'code') {
+      updateCellMetadata(cell as DataflowCodeCellModel, content, allTags)
     }
   });
 }
 
-function updateCellMetadata(cell: DataflowCodeCell, content: any, allTags: { [key: string]: string }): void {
-  const cId = truncateCellId(cell.model.id);
-  const dfmetadata = cell.model.getMetadata('dfmetadata') || {};
-
+function updateCellMetadata(cell: DataflowCodeCellModel, content: any, allTags: { [key: string]: string }): void {
+  const cId = truncateCellId(cell.id);
+  const dfmetadata = cell.getMetadata('dfmetadata');
+  
   if (content.persistent_code?.[cId]) {
     dfmetadata.persistentCode = content.persistent_code[cId];
   }
@@ -35,16 +42,16 @@ function updateCellMetadata(cell: DataflowCodeCell, content: any, allTags: { [ke
     };
   
     let cellOutputTags: string[] = [];
-    for (let i = 0; i < cell.model.outputs.length; ++i) {
-      const out = cell.model.outputs.get(i);
+    for (let i = 0; i < cell.outputs.length; ++i) {
+      const out = cell.outputs.get(i);
       if(out.metadata['output_tag']){
         cellOutputTags.push(out.metadata['output_tag'] as string);
       }
     }
     dfmetadata.outputVars = cellOutputTags;
-    cell.executedCode = cell.model.sharedModel.getSource();
+    (cell as DataflowCodeCellModel).lastExecutedCode = cell.sharedModel.getSource();
   }
-  cell.model.setMetadata('dfmetadata', dfmetadata);
+  cell.setMetadata('dfmetadata', dfmetadata);
 }
 
 function mapTagsToRefs(refs: { [key: string]: any }, allTags: { [key: string]: string }): { [key: string]: string } {

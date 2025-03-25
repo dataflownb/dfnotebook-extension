@@ -84,7 +84,7 @@ input:checked + .slider:before {
 }
 
 /* add & modify tag dialog css*/
-.cellNameInput {
+.cellTagInput {
   margin: 10px 0;
 }
 
@@ -98,7 +98,7 @@ input:checked + .slider:before {
   margin-top: 6px;
 }
 
-.cellNameErrorMessage {
+.cellTagErrorMessage {
   color: red;
   margin-top: 10px;
 }

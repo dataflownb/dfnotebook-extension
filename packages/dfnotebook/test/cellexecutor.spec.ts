@@ -8,8 +8,8 @@ import { INotebookModel, NotebookActions, NotebookPanel } from '@jupyterlab/note
 import * as nbformat from '@jupyterlab/nbformat';
 import { ICodeCellModel } from '@jupyterlab/cells';
 import { truncateCellId } from '@dfnotebook/dfutils';
-import { DataflowCodeCell } from '@dfnotebook/dfcells';
-import { updateCellsByName }  from '../../dfnotebook-extension/src/cellname';
+import { DataflowCodeCell, DataflowCodeCellModel } from '@dfnotebook/dfcells';
+import { updateCellsByTag }  from '../../dfnotebook-extension/src/cellname';
 
 const server = new JupyterServer();
 
@@ -195,7 +195,7 @@ describe('@dfnotebook/cellExecutor', () => {
       expect(secondCell.sharedModel.getSource()).toBe('b=a$'+refId+'+9');
     });
   
-    it('uuid removed if present for identifier exported once', async () => {
+    it('uuid removed if identifier exported once (case delete cell)', async () => {
       // code cell 1
       panel.content.model?.sharedModel.insertCell(0, {
         cell_type: 'code',
@@ -244,8 +244,72 @@ describe('@dfnotebook/cellExecutor', () => {
       let secondCell = panel.content.model?.cells.get(1) as ICodeCellModel;
       expect(secondCell.sharedModel.getSource()).toBe('b=a$'+refId+'+9');
   
-      //deleting code cell 2
+      //deleting code cell 3
       panel.content.model?.sharedModel.deleteCell(2)
+  
+      panel.content.select(panel.content.widgets[0]);
+      result = await NotebookActions.run(panel.content, sessionContext);
+      expect(result).toBe(true);
+  
+      secondCell = panel.content.model?.cells.get(1) as ICodeCellModel;
+      expect(secondCell.sharedModel.getSource()).toBe('b=a+9');
+    });
+
+    it('uuid removed if identifier exported once (case change in code)', async () => {
+      // code cell 1
+      panel.content.model?.sharedModel.insertCell(0, {
+        cell_type: 'code',
+        source: 'a=9',
+        metadata: {
+          trusted: false
+        }
+      });
+      
+      //make cell active and execute
+      panel.content.select(panel.content.widgets[0]);
+      let result = await NotebookActions.run(panel.content, sessionContext);
+      expect(result).toBe(true);  // true when execution succeeds
+  
+      // code cell 2
+      panel.content.model?.sharedModel.insertCell(1, {
+        cell_type: 'code',
+        source: 'b=a+9',
+        metadata: {
+          trusted: false
+        }
+      });
+  
+      //make cell active and execute
+      panel.content.select(panel.content.widgets[1]);
+      result = await NotebookActions.run(panel.content, sessionContext);
+      expect(result).toBe(true);
+  
+      // code cell 3
+      panel.content.model?.sharedModel.insertCell(2, {
+        cell_type: 'code',
+        source: 'a=99',
+        metadata: {
+          trusted: false
+        }
+      });
+  
+      //make cell active and execute
+      panel.content.select(panel.content.widgets[2]);
+      result = await NotebookActions.run(panel.content, sessionContext);
+      expect(result).toBe(true);
+  
+      // verifies UUID is added for identifier 'a' since it is exported twice
+      const firstCell = panel.content.model?.cells.get(0) as ICodeCellModel;
+      const refId = truncateCellId(firstCell.id);
+      let secondCell = panel.content.model?.cells.get(1) as ICodeCellModel;
+      expect(secondCell.sharedModel.getSource()).toBe('b=a$'+refId+'+9');
+  
+      //updating code cell 3
+      panel.content.select(panel.content.widgets[2]);
+      const thirdCell = panel.content.model?.cells.get(2) as ICodeCellModel;
+      thirdCell.sharedModel.setSource('');
+      result = await NotebookActions.run(panel.content, sessionContext);
+      expect(result).toBe(true);
   
       panel.content.select(panel.content.widgets[0]);
       result = await NotebookActions.run(panel.content, sessionContext);
@@ -402,7 +466,7 @@ describe('@dfnotebook/cellExecutor', () => {
       panel.content.select(panel.content.widgets[0]);
       let cell = panel.content.widgets[0] as DataflowCodeCell;
       cell.addTag("testTag");
-      await updateCellsByName(panel, refId, sessionContext);
+      await updateCellsByTag(panel, refId, sessionContext);
 
       // verifies tag is added for identifier references of 'a'
       secondCell = panel.content.model?.cells.get(1) as ICodeCellModel;
@@ -473,7 +537,7 @@ describe('@dfnotebook/cellExecutor', () => {
       firstCell = panel.content.widgets[0] as DataflowCodeCell;
       firstCell.addTag("");
       
-      await updateCellsByName(panel, refId, sessionContext);
+      await updateCellsByTag(panel, refId, sessionContext);
 
       // verifies UUID is added when tag is deleted
       secondCell = panel.content.model?.cells.get(1) as ICodeCellModel;
@@ -541,8 +605,6 @@ describe('@dfnotebook/cellExecutor', () => {
         }
       });
       
-      //expect(firstcell.executedCode).toBe('');
-
       //make cell active and execute
       panel.content.select(panel.content.widgets[0]);
       let result = await NotebookActions.run(panel.content, sessionContext);
@@ -550,7 +612,7 @@ describe('@dfnotebook/cellExecutor', () => {
       
       let firstcell = panel.content.widgets[0] as DataflowCodeCell;
       firstcell = panel.content.widgets[0] as DataflowCodeCell;
-      expect(firstcell.executedCode).toBe('a=9');
+      expect((firstcell.model as DataflowCodeCellModel).lastExecutedCode).toBe('a=9');
     });
 
     it('executedCode property should not updated when source code of cell is modified', async () => {
@@ -569,15 +631,15 @@ describe('@dfnotebook/cellExecutor', () => {
       expect(result).toBe(true);
       
       let firstcell = panel.content.widgets[0] as DataflowCodeCell;
-      expect(firstcell.executedCode).toBe('a=9');
+      expect((firstcell.model as DataflowCodeCellModel).lastExecutedCode).toBe('a=9');
 
       firstcell.model.sharedModel.setSource("b=9");
-      expect(firstcell.executedCode).toBe('a=9');
+      expect((firstcell.model as DataflowCodeCellModel).lastExecutedCode).toBe('a=9');
 
       panel.content.select(panel.content.widgets[0]);
       result = await NotebookActions.run(panel.content, sessionContext);
       expect(result).toBe(true);
-      expect(firstcell.executedCode).toBe('b=9');
+      expect((firstcell.model as DataflowCodeCellModel).lastExecutedCode).toBe('b=9');
     });
 
     it('isTagsEnabled property is set using the enableTags method', async () => {
@@ -598,7 +660,7 @@ describe('@dfnotebook/cellExecutor', () => {
       
       let firstcell = panel.content.widgets[0] as DataflowCodeCell;
       firstcell.enableTags(is_enabled)
-      expect(firstcell.isTagsEnabled).toBe(is_enabled);
+      expect((firstcell.model as DataflowCodeCellModel).isTagsEnabled).toBe(is_enabled);
     });
   });
 
