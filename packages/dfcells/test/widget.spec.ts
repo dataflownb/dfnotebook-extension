@@ -11,8 +11,8 @@ import {
   CellModel,
   //CodeCell,
   CodeCellModel,
-  //InputArea,
-  //InputPrompt,
+  InputArea,
+  InputPrompt,
   //MarkdownCell,
   MarkdownCellModel,
   //RawCell,
@@ -23,8 +23,6 @@ import {
   DataflowCell as Cell,
   DataflowCodeCell as CodeCell,
   DataflowMarkdownCell as MarkdownCell,
-  DataflowInputArea as InputArea,
-  DataflowInputPrompt as InputPrompt,
   DataflowRawCell as RawCell
 } from '@dfnotebook/dfcells';
 

@@ -7,5 +7,4 @@
  * @module dfcells
  */
 
-export * from './inputarea';
 export * from './widget';

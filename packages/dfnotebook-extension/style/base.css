@@ -84,21 +84,21 @@ input:checked + .slider:before {
 }
 
 /* add & modify tag dialog css*/
-.rename-tag-input {
+.cellTagInput {
   margin: 10px 0;
 }
 
-.update-references-label {
+.updateReferencesLabel {
   display: inline-block;
   vertical-align: middle;
 }
 
-.update-references-checkbox {
+.updateReferencesCheckbox {
   vertical-align: middle;
   margin-top: 6px;
 }
 
-.error-message {
+.cellTagErrorMessage {
   color: red;
   margin-top: 10px;
 }

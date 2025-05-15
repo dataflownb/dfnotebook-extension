@@ -7,28 +7,21 @@ import {
   ICellModel,
   ICodeCellModel,
   IInputPrompt,
+  InputPrompt,
   MarkdownCell,
   RawCell
 } from '@jupyterlab/cells';
-import { DataflowInputArea, DataflowInputPrompt } from './inputarea';
 import { IOutputAreaModel, IOutputPrompt } from '@jupyterlab/outputarea';
 import {
   DataflowOutputArea,
   DataflowOutputPrompt
 } from '@dfnotebook/dfoutputarea';
 import { cellIdIntToStr, truncateCellId } from '@dfnotebook/dfutils';
-import { IChangedArgs } from '@jupyterlab/coreutils';
 import { ISessionContext } from '@jupyterlab/apputils';
 import { JSONObject } from '@lumino/coreutils';
 import { Panel } from '@lumino/widgets';
-import { NotebookPanel } from '@jupyterlab/notebook';
 
-// FIXME need to add this back when dfgraph is working
 import { Manager as GraphManager } from '@dfnotebook/dfgraph';
-/**
- * The CSS class added to the cell input area.
- */
-const CELL_INPUT_AREA_CLASS = 'jp-Cell-inputArea';
 
 /**
  * The CSS class added to the cell output area.
@@ -37,37 +30,7 @@ const CELL_OUTPUT_AREA_CLASS = 'jp-Cell-outputArea';
 
 export const notebookCellMap = new Map<string, Map<string, string>>();
 
-function setInputArea<T extends ICellModel = ICellModel>(cell: Cell) {
-  // FIXME may be able to get panel via (this.layout as PanelLayout).widgets?
-  //@ts-expect-error
-  const inputWrapper = cell._inputWrapper as Panel;
-  const input = cell.inputArea;
-
-  // find the input area widget
-  let inputIdx = -1;
-  if (input) {
-    const { id } = input;
-    inputWrapper.widgets.forEach((widget, idx) => {
-      if (widget.id === id) {
-        inputIdx = idx;
-      }
-    });
-  }
-
-  const dfInput = new DataflowInputArea({
-    model: cell.model,
-    contentFactory: cell.contentFactory,
-    editorOptions: { config: cell.editorConfig }
-  });
-  dfInput.addClass(CELL_INPUT_AREA_CLASS);
-
-  inputWrapper.insertWidget(inputIdx, dfInput);
-  input?.dispose();
-  //@ts-expect-error
-  cell._input = dfInput;
-}
-
-function setOutputArea(cell: CodeCell) {
+function setOutputArea(cell: DataflowCodeCell) {
   //@ts-expect-error
   const outputWrapper = cell._outputWrapper as Panel;
   const output = cell.outputArea;
@@ -91,10 +54,12 @@ function setOutputArea(cell: CodeCell) {
       translator: output._translator,
       promptOverlay: true,
       //@ts-expect-error
-      inputHistoryScope: output._inputHistoryScope
+      inputHistoryScope: output._inputHistoryScope,
     },
     truncateCellId(cell.model.id)
   );
+  //@ts-ignore
+  dfOutput.node.addEventListener('keydown', cell._detectCaretMovementInOuput);
 
   dfOutput.addClass(CELL_OUTPUT_AREA_CLASS);
 
@@ -105,10 +70,12 @@ function setOutputArea(cell: CodeCell) {
     cell.outputsScrolled = !cell.outputsScrolled;
   });
 
-  // output.initialize.disconnect();
-  // dfOutput.initialize.connect(() => {
-  //   this.updatePromptOverlayIcon();
-  // });
+  output.initialize.disconnect(() => {
+    cell.updatePromptOverlayIcon();    
+  });
+  dfOutput.initialize.connect(() => {
+    cell.updatePromptOverlayIcon();
+  });
 
   output.outputLengthChanged.disconnect(
     //@ts-expect-error
@@ -130,7 +97,8 @@ function setDFMetadata(cell: CodeCell) {
       tag: "",
       inputVars: { ref: {}, tag_refs: {} },
       outputVars: [],
-      persistentCode: ""
+      persistentCode: "",
+      isReactive: true
     };
     cell.model.setMetadata('dfmetadata', dfmetadata);
   }
@@ -139,7 +107,7 @@ function setDFMetadata(cell: CodeCell) {
 export class DataflowCell<T extends ICellModel = ICellModel> extends Cell<T> {
   protected initializeDOM(): void {
     super.initializeDOM();
-    setInputArea(this);
+    this._setPrompt(''); // argument is not important
     this.addClass('df-cell');
   }
 }
@@ -150,7 +118,7 @@ export namespace DataflowCell {
      * Create an input prompt.
      */
     createInputPrompt(): IInputPrompt {
-      return new DataflowInputPrompt();
+      return new InputPrompt();
     }
 
     /**
@@ -165,7 +133,6 @@ export namespace DataflowCell {
 export class DataflowMarkdownCell extends MarkdownCell {
   protected initializeDOM(): void {
     super.initializeDOM();
-    setInputArea(this);
     this.addClass('df-cell');
     if(this.model.getMetadata('dfmetadata')){
       this.model.deleteMetadata('dfmetadata')
@@ -176,7 +143,6 @@ export class DataflowMarkdownCell extends MarkdownCell {
 export class DataflowRawCell extends RawCell {
   protected initializeDOM(): void {
     super.initializeDOM();
-    setInputArea(this);
     this.addClass('df-cell');
     if(this.model.getMetadata('dfmetadata')){
       this.model.deleteMetadata('dfmetadata')
@@ -189,72 +155,77 @@ export abstract class DataflowAttachmentsCell<
 > extends AttachmentsCell<T> {
   protected initializeDOM(): void {
     super.initializeDOM();
-    setInputArea(this);
     this.addClass('df-cell');
   }
+}
+
+export interface DataflowCodeCellModel extends ICodeCellModel {
+  lastExecutedCode: string;
+  isTagsEnabled: boolean;
 }
 
 export class DataflowCodeCell extends CodeCell {
   protected initializeDOM(): void {
     super.initializeDOM();
-    setInputArea(this);
     setOutputArea(this);
-    this.setPromptToId();
+    this._setPrompt(''); // argument is not important
     this.addClass('df-cell');
   }
 
-  public setPromptToId() {
-    // FIXME move this to a function to unify with the code in dfnotebook/actions.tsx
-    this.setPrompt(`${truncateCellId(this.model.id) || ''}`);
+  protected _setPrompt(value: string): void {
+    /* a little annoying that _updatePrompt is private as we basically need to
+     * reimplement its logic here...
+     * but thankfully _setPrompt can be overridden
+     */
+    const isTagsEnabled = (this.model as DataflowCodeCellModel).isTagsEnabled;
+    if (this.model.executionState == 'running') {
+      this.prompt = '*';
+    } else if(isTagsEnabled && this.tag){
+      this.prompt = `${this.tag}`;
+    } else{
+      this.prompt = `${truncateCellId(this.model.id) || ''}`;
+    }
+    
+    this.inputArea?.setPrompt(this.prompt);
+  }
+
+  public addTag(value: string | null) {
+    const dfmetadata = this.model?.getMetadata('dfmetadata');
+    dfmetadata.tag = value;
+    this.model?.setMetadata('dfmetadata', dfmetadata);
+    this._setPrompt(''); // argument is not important
+  }
+
+  public get tag(): string | null {
+    const dfmetadata = this.model?.getMetadata('dfmetadata');
+    return dfmetadata?.tag;
   }
 
   initializeState(): this {
     super.initializeState();
-    this.setPromptToId();
     setDFMetadata(this);
     this.model.contentChanged.connect(this._onContentChanged, this);
+    (this.model as DataflowCodeCellModel).lastExecutedCode = this.model.sharedModel.getSource().trim();
     return this;
   }
 
-  protected onStateChanged(model: ICellModel, args: IChangedArgs<any>): void {
-    super.onStateChanged(model, args);
-    switch (args.name) {
-      case 'executionCount':
-        this.setPromptToId();
-        break;
-      default:
-        break;
-    }
-  }
-
   private _onContentChanged(): void {
-    let notebookpanelId = getNotebookId(this)
-
-    if(notebookpanelId){
-      const currentCode = this.model.sharedModel.getSource().trim();
-      const cId = truncateCellId(this.model.sharedModel.getId());
-      const executedCode = notebookCellMap.get(notebookpanelId)?.get(cId)?.trim();
-      if (executedCode != ''){
-        if(executedCode === currentCode){
-          this.node.classList.add('df-cell-not-dirty');
-        }
-        else{
-          this.node.classList.remove('df-cell-not-dirty');
-        }
+    const currentCode = this.model.sharedModel.getSource().trim();
+    const lastExecutedCode = (this.model as DataflowCodeCellModel).lastExecutedCode;
+    if (lastExecutedCode != ''){
+      if(lastExecutedCode === currentCode){
+        this.node.classList.add('df-cell-not-dirty');
+      }
+      else{
+        this.node.classList.remove('df-cell-not-dirty');
       }
     }
   }
-}
 
-export function getNotebookId(cell: DataflowCodeCell): string|undefined {
-  let parent = cell.parent;
-    while (parent) {
-      if (parent instanceof NotebookPanel) {
-        return parent.id;
-      }
-      parent = parent.parent;
-    }
-  return undefined;
+  public enableTags(value: boolean) {
+    (this.model as DataflowCodeCellModel).isTagsEnabled = value;
+    this._setPrompt(''); // argument is not important
+  }
 }
 
 export namespace DataflowCodeCell {
@@ -271,9 +242,13 @@ export namespace DataflowCodeCell {
     const model = cell.model;
     const code = model.sharedModel.getSource();
     if (!code.trim() || !sessionContext.session?.kernel) {
-      model.sharedModel.transact(() => {
-        model.clearExecution();
-      }, false);
+      model.sharedModel.transact(
+        () => {
+          model.clearExecution();
+        },
+        false,
+        'silent-change'
+      );
       return;
     }
     const cellId = { cellId: model.sharedModel.getId() };
@@ -283,11 +258,15 @@ export namespace DataflowCodeCell {
       ...cellId
     };
     const { recordTiming } = metadata;
-    model.sharedModel.transact(() => {
-      model.clearExecution();
-      cell.outputHidden = false;
-    }, false);
-    cell.setPrompt('*');
+    model.sharedModel.transact(
+      () => {
+        model.clearExecution();
+        cell.outputHidden = false;
+      },
+      false,
+      'silent-change'
+    );
+    model.executionState = 'running';
     model.trusted = true;
     let future:
       | Kernel.IFuture<
@@ -419,7 +398,7 @@ export namespace DataflowCodeCell {
       // execution, clear the prompt.
       if (future && !cell.isDisposed && cell.outputArea.future === future) {
         // FIXME is this necessary?
-        cell.setPromptToId();
+        cell.model.executionState = 'idle';
       }
       throw e;
     }

@@ -152,14 +152,14 @@
     }
   },
   "dependencies": {
-    "@jupyterlab/application": "^4.2.1"
+    "@jupyterlab/application": "^4.3.5"
   },
   "devDependencies": {
     "@babel/core": "^7.0.0",
     "@babel/preset-env": "^7.0.0",
-    "@jupyterlab/builder": "^4.2.1",
-    "@jupyterlab/buildutils": "^4.2.1",
-    "@jupyterlab/testutils": "^4.2.1",
+    "@jupyterlab/builder": "^4.3.5",
+    "@jupyterlab/buildutils": "^4.3.5",
+    "@jupyterlab/testutils": "^4.3.5",
     "@types/jest": "^29.2.0",
     "@types/json-schema": "^7.0.11",
     "@types/react": "^18.0.26",

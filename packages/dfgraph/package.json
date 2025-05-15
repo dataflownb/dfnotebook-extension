@@ -156,7 +156,7 @@
   "dependencies": {
     "@dfnotebook/dfutils": ">0.4.0-a",
     "@hpcc-js/wasm": "^2.15.3",
-    "@lumino/widgets": "^2.3.2",
+    "@lumino/widgets": "^2.5.0",
     "@types/d3": "^7.4.3",
     "@types/d3-graphviz": "^2.6.10",
     "@types/graphlib": "^2.1.8",
@@ -176,9 +176,9 @@
   "devDependencies": {
     "@babel/core": "^7",
     "@babel/preset-env": "^7",
-    "@jupyterlab/builder": "^4.2.1",
-    "@jupyterlab/testing": "^4.2.1",
-    "@jupyterlab/testutils": "^4.2.1",
+    "@jupyterlab/builder": "^4.3.5",
+    "@jupyterlab/testing": "^4.3.5",
+    "@jupyterlab/testutils": "^4.3.5",
     "@types/jest": "^29.2.0",
     "@types/json-schema": "^7.0.11",
     "@types/react": "^18.0.26",

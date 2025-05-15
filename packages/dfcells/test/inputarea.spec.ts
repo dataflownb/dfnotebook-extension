@@ -5,9 +5,7 @@ import { Widget } from '@lumino/widgets';
 
 import { CodeEditorWrapper } from '@jupyterlab/codeeditor';
 
-import { CodeCellModel } from '@jupyterlab/cells';
-
-import { DataflowInputArea as InputArea, DataflowInputPrompt as InputPrompt } from '@dfnotebook/dfcells';
+import { CodeCellModel, InputArea, InputPrompt } from '@jupyterlab/cells';
 
 import { NBTestUtils } from '@jupyterlab/cells/lib/testutils';
 

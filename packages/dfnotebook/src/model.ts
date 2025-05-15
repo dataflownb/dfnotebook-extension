@@ -14,7 +14,10 @@ export class DataflowNotebookModel extends NotebookModel {
     }
     super.fromJSON(value);
     this.setMetadata('dfnotebook', isDataflow);
-    this.setMetadata('enable_tags', true);
+    if(this.getMetadata('enable_tags') == undefined){
+      this.setMetadata('enable_tags', true);
+      this.setMetadata('enable_reactive', true);
+    }
   }
 
 }
