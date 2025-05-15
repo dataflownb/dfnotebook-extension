@@ -64,8 +64,11 @@ export function getCellsMetadata(notebook: DataflowNotebookModel, cellUUID: stri
     const outputTags: { [key: string]: string[] } = {};
     const inputTags: { [key: string]: string } = {};
     const allRefs: { [key: string]: { [key: string]: string[] } } = {};
+    const autoUpdateFlags: { [key: string]: boolean } = {};
+    const forceCachedFlags: { [key: string]: boolean } = {};
     const cellsArray = Array.from(notebook.cells);
 
+    const reactiveEnabled = notebook.getMetadata('enable_reactive') ?? false;
     cellsArray.forEach(cell => {
       if (cell.type === 'code') {
         const c = cell as DataflowCodeCellModel;
@@ -86,6 +89,8 @@ export function getCellsMetadata(notebook: DataflowNotebookModel, cellUUID: stri
         cellIdModelMap[cId] = c;
         outputTags[cId] = dfmetadata?.outputVars;
         allRefs[cId] = dfmetadata?.inputVars;      
+        autoUpdateFlags[cId] = reactiveEnabled && dfmetadata.isReactive;
+        forceCachedFlags[cId] = reactiveEnabled && (! dfmetadata.isReactive);
       }
     });
 
@@ -95,8 +100,8 @@ export function getCellsMetadata(notebook: DataflowNotebookModel, cellUUID: stri
       code_dict: codeDict,
       output_tags: outputTags,
       input_tags: inputTags,
-      auto_update_flags: {},
-      force_cached_flags: {},
+      auto_update_flags: autoUpdateFlags,
+      force_cached_flags: forceCachedFlags,
       all_refs: allRefs,
       executed_code: {}
     };

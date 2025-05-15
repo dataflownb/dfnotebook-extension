@@ -1,7 +1,7 @@
 import { DataflowCodeCell, DataflowCodeCellModel } from "@dfnotebook/dfcells";
 import { truncateCellId } from "@dfnotebook/dfutils";
 import { Dialog, ISessionContext, showDialog } from "@jupyterlab/apputils";
-import { NotebookPanel } from "@jupyterlab/notebook";
+import { NotebookActions, NotebookPanel } from "@jupyterlab/notebook";
 import { Widget } from '@lumino/widgets';
 import { DataflowNotebookModel, dfCommGetData, getCellsMetadata, getAllTags } from '@dfnotebook/dfnotebook'
 
@@ -33,22 +33,23 @@ function createConfirmReplaceCellTagDialog(existingCellTag: string): HTMLElement
   
   body.appendChild(message);
 
-  const updateReferencesLabel = document.createElement('label');
-  updateReferencesLabel.textContent = 'Remove the existing cell name from all referenced locations:';
-  updateReferencesLabel.classList.add('updateReferencesLabel');
-  
   const updateReferencesCheckbox = document.createElement('input');
   updateReferencesCheckbox.name = 'updateReferences';
   updateReferencesCheckbox.type = 'checkbox';
-  updateReferencesCheckbox.checked = true;
+  updateReferencesCheckbox.checked = false;
   updateReferencesCheckbox.classList.add('updateReferencesCheckbox');
-  body.appendChild(updateReferencesLabel);
   body.appendChild(updateReferencesCheckbox);
+  
+  const updateReferencesLabel = document.createElement('label');
+  //updateReferencesLabel.textContent = 'Remove the existing cell name from all referenced locations:';
+  updateReferencesLabel.textContent = 'Keep existing cell name in all referenced locations and re-execute referenced cells';
+  updateReferencesLabel.classList.add('updateReferencesLabel');
+  body.appendChild(updateReferencesLabel);
 
   return body;
 }
 
-async function showConfirmReplaceCellTagDialog(existingCellTag: string): Promise<{ update: boolean, ref: boolean }> {
+async function showConfirmReplaceCellTagDialog(existingCellTag: string): Promise<{ confirmReplacement: boolean, removeReferences: boolean }> {
   const dialogNode = createConfirmReplaceCellTagDialog(existingCellTag);
   const widgetNode = new Widget();
   widgetNode.node.appendChild(dialogNode);
@@ -63,9 +64,8 @@ async function showConfirmReplaceCellTagDialog(existingCellTag: string): Promise
   });
 
   const updateReferencesCheckbox = dialogNode.querySelector('.updateReferencesCheckbox') as HTMLInputElement;
-  return { update: result.button.accept, ref: updateReferencesCheckbox.checked };
+  return { confirmReplacement: result.button.accept, removeReferences: !updateReferencesCheckbox.checked };
 }
-
 
 /**
  * cell name dialog creation and usage
@@ -133,11 +133,11 @@ async function showCellTagDialog(notebook: NotebookPanel, isAddTagOperation: boo
 
   if (result.button.accept) {
       const newCellTag = (dialogNode.querySelector('input[name="newCellTagInput"]') as HTMLInputElement).value.trim();
-      const updateReferences = true;
+      //const updateReferences = true;
       const deleteTag = result.button.label === 'Delete';
 
       if (deleteTag) {
-        await cellTagOperation(notebook, cell, '', updateReferences);
+        await cellTagOperation(notebook, cell, '', false);
         return;
       }
   
@@ -148,31 +148,46 @@ async function showCellTagDialog(notebook: NotebookPanel, isAddTagOperation: boo
       } else if (hexRegexp.test(newCellTag)) {
         await showCellTagDialog(notebook, isAddTagOperation, cell, existingCellTag, existingCellTags, 'Cell name cannot be 8 hex values. Enter a valid cell name.');
       } else if (existingCellTags.has(newCellTag)){
-        const { update, ref } = await showConfirmReplaceCellTagDialog(newCellTag);
+        const { confirmReplacement, removeReferences } = await showConfirmReplaceCellTagDialog(newCellTag);
         const existingCell = getCellWithTag(notebook, newCellTag);
         
-        if(update && existingCell){
-          await cellTagOperation(notebook, existingCell, '', ref);
-          await cellTagOperation(notebook, cell, newCellTag, true)
+        if(confirmReplacement && existingCell){
+          if(removeReferences){
+            await cellTagOperation(notebook, existingCell, '', false);
+            await cellTagOperation(notebook, cell, newCellTag, false);
+          }
+          else{
+            await cellTagOperation(notebook, existingCell, newCellTag, true, cell);
+          }
         }
         else{
           await showCellTagDialog(notebook, isAddTagOperation, cell, existingCellTag, existingCellTags, 'Cell name already exists. Enter a different cell name.');
         }
       } else {
-        await cellTagOperation(notebook, cell, newCellTag, updateReferences)
+        await cellTagOperation(notebook, cell, newCellTag, false)
       }
   }
   return;
 }
 
-async function cellTagOperation(notebook: NotebookPanel, cell: DataflowCodeCell, newCellTag: string, updateReferences: boolean){
-  const cellUUID = truncateCellId(cell.model.id);
-  cell.addTag(newCellTag);
-  
-  if (updateReferences) {
+async function cellTagOperation(notebook: NotebookPanel, dfcell: DataflowCodeCell, newCellTag: string, isReplace: boolean, newCell: DataflowCodeCell|null=null){
+  const cellUUID = truncateCellId(dfcell.model.id);
+  // add, delete, modify
+  if (!isReplace) {
+    dfcell.addTag(newCellTag);
     await updateCellsByTag(notebook, cellUUID, notebook.sessionContext)
   }
-  else if (updateReferences == false) {
+  //replace
+  else if(isReplace == true && newCell != null){
+    //remove existing tag at inputPrompt
+    dfcell.addTag('');
+
+    //add new tag and update its downstream
+    const newCellUUID = truncateCellId(newCell.model.id);
+    newCell?.addTag(newCellTag);
+    await updateCellsByTag(notebook, newCellUUID, notebook.sessionContext)
+
+    // update the metadata for replace operation
     const all_tags: { [key: string]: string } = {};
 
     notebook.content.widgets.forEach(cell => {
@@ -185,6 +200,8 @@ async function cellTagOperation(notebook: NotebookPanel, cell: DataflowCodeCell,
       }
     });
 
+    const newCellOutputs = newCell.model.getMetadata('dfmetadata').outputVars;
+
     notebook.content.widgets.forEach(async cell => {
       if (cell instanceof DataflowCodeCell) {
         const dfmetadata = cell.model.getMetadata('dfmetadata');
@@ -192,17 +209,53 @@ async function cellTagOperation(notebook: NotebookPanel, cell: DataflowCodeCell,
         if (inputVarsMetadata && typeof inputVarsMetadata === 'object' && 'ref' in inputVarsMetadata) {
           const refValue = inputVarsMetadata.ref as { [key: string]: any };
           const tagRefValue: { [key: string]: any } = {};
+          const newRefvalue: { [key: string]: any } = refValue;
+
           for (const ref_key in refValue) {
             if (ref_key != cellUUID && all_tags.hasOwnProperty(ref_key)) {
               tagRefValue[ref_key] = all_tags[ref_key];
             }
+            else if(ref_key === cellUUID){
+              tagRefValue[newCellUUID] = all_tags[newCellUUID]
+              
+              const commonOutputs = newRefvalue[cellUUID].filter((item: any) => newCellOutputs.includes(item));
+              newRefvalue[cellUUID] = newRefvalue[cellUUID].filter((item: any) => !commonOutputs.includes(item));
+              
+              if(commonOutputs.length > 0 && !(newCellUUID in newRefvalue)){
+                newRefvalue[newCellUUID] = commonOutputs;
+              }
+              else if(commonOutputs.length > 0){
+                newRefvalue[newCellUUID] = [...new Set([...newRefvalue[newCellUUID], ...commonOutputs])];
+              }
+
+              if(newRefvalue[cellUUID].length === 0){
+                delete newRefvalue[cellUUID];
+              }
+            }
           }
-          dfmetadata.inputVars = { 'ref': refValue, 'tag_refs': tagRefValue };
+          dfmetadata.inputVars = { 'ref': newRefvalue, 'tag_refs': tagRefValue };
           cell.model.setMetadata('dfmetadata', dfmetadata);
-          await updateCellsByTag(notebook, cellUUID, notebook.sessionContext, false, true)
+          //await updateCellsByTag(notebook, cellUUID, notebook.sessionContext, false, false);
         }
       }
     });
+
+    await updateCellsByTag(notebook, cellUUID, notebook.sessionContext, false, false, newCellTag, cellUUID);
+    
+    //enable reactive mode if disabled
+    // const currReactiveState = notebook.model?.getMetadata('enable_reactive');
+    // const currCellsReactiveStates = getReactiveStates(notebook);
+
+    // notebook.model?.setMetadata('enable_reactive', true)
+    // setReactiveStates(notebook, true)
+    
+    //execute
+    notebook.content.activeCellIndex = notebook.content.widgets.indexOf(dfcell);
+    NotebookActions.run(notebook.content, notebook.sessionContext)
+    notebook.content.activeCellIndex = notebook.content.widgets.indexOf(newCell);
+
+    // setReactiveStates(notebook, null, currCellsReactiveStates)
+    // notebook.model?.setMetadata('enable_reactive', currReactiveState)
   }
 }
 
@@ -248,7 +301,7 @@ function getExistingCellTags(notebook: NotebookPanel): Set<string>{
   return existingCellTags;
 }
 
-export async function updateCellsByTag(notebook: NotebookPanel, cellUUID: string, sessionContext: ISessionContext, hideTags: boolean=false, updateInputTagsOnly: boolean=false) {
+export async function updateCellsByTag(notebook: NotebookPanel, cellUUID: string, sessionContext: ISessionContext, hideTags: boolean=false, updateInputTagsOnly: boolean=false, replacingTagName:string|null=null, replacedTagCellId: string|null=null) {
     let dfData = getCellsMetadata(notebook.model as DataflowNotebookModel, '');
     
     const executedCode: { [key: string]: string } = {};
@@ -269,7 +322,12 @@ export async function updateCellsByTag(notebook: NotebookPanel, cellUUID: string
       dfData.dfMetadata.output_tags = {}
       dfData.dfMetadata.code_dict = {}
     }
-  
+    
+    if(replacingTagName != null && replacedTagCellId != null){
+      Object.assign(dfData.dfMetadata, { replacing_tag_name: replacingTagName });
+      Object.assign(dfData.dfMetadata, { replaced_tag_cell_id: replacedTagCellId });
+    }
+
     try {
       const response = await dfCommGetData(sessionContext, {'dfMetadata': dfData.dfMetadata, 'updateExecutedCode': true});
       updateNotebookCells(notebook, response, cellUUID, hideTags);

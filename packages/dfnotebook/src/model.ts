@@ -16,6 +16,7 @@ export class DataflowNotebookModel extends NotebookModel {
     this.setMetadata('dfnotebook', isDataflow);
     if(this.getMetadata('enable_tags') == undefined){
       this.setMetadata('enable_tags', true);
+      this.setMetadata('enable_reactive', true);
     }
   }
 
